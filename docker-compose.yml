@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  php-app:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    restart: always
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: infcraft_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d
+      - db-data:/var/lib/mysql
+    restart: always
+
+volumes:
+  db-data:
