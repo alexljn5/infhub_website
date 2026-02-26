@@ -7,7 +7,8 @@
     <title>Welcome to the INFHUB project!</title>
     <link rel="icon" type="image/ico" href="./img/logo/infhub_favicon.ico">
     <link rel="stylesheet" href="css/styles.css">
-    <script src="js/clickableboxes.js" defer></script>
+    <script src="js/infhub/infhub_main.js" defer></script>
+    <script src="js/infhub/clickableboxes.js" defer></script>
 </head>
 
 <body>

@@ -16,11 +16,6 @@ serverBoxes.forEach(box => {
         setTimeout(() => {
             box.classList.remove('clicked');
         }, 200);
-
-        // Redirect based on server ID
-        if (serverId === 'infcraftBox') {
-            window.location.href = 'php/pages/infcraft.php';
-        }
     });
 
     // Hover effect
