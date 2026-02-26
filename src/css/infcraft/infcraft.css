@@ -1,0 +1,234 @@
+/* Base Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    background-color: #960a0a;
+    color: rgb(250, 0, 0);
+    padding: 20px;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+header h1 {
+    margin: 0;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    padding: 20px;
+}
+
+footer {
+    background-color: #000000;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+.registrationOrLoginContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Form Container */
+.formContainer {
+    background-color: #1a1a1a;
+    border: 2px solid #FF0000;
+    border-radius: 10px;
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+.formTabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #FF0000;
+}
+
+.tabButton {
+    flex: 1;
+    padding: 12px;
+    background-color: transparent;
+    color: white;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.tabButton:hover {
+    color: #FF0000;
+}
+
+.tabButton.active {
+    border-bottom-color: #FF0000;
+    color: #FF0000;
+}
+
+.form {
+    display: none;
+}
+
+.form.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.form h2 {
+    text-align: center;
+    color: #FF0000;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.formGroup {
+    margin-bottom: 15px;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 5px;
+    color: white;
+    font-weight: bold;
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 10px;
+    background-color: #2a2a2a;
+    border: 1px solid #FF0000;
+    border-radius: 5px;
+    color: white;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.formGroup input:focus {
+    outline: none;
+    border-color: #FF6666;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.submitBtn {
+    width: 100%;
+    padding: 12px;
+    background-color: #FF0000;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submitBtn:hover {
+    background-color: #FF6666;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}
+
+/* Header compact auth dropdown */
+.headerControls {
+    position: absolute;
+    top: 12px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.loginToggle {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.headerAuthDropdown {
+    position: relative;
+}
+
+.headerAuthDropdown .formContainer.compact {
+    position: absolute;
+    top: 36px;
+    right: 0;
+    width: 260px;
+    padding: 12px;
+    max-width: 320px;
+    background-color: rgba(10, 10, 10, 0.95);
+    border: 1px solid #550000;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    display: none;
+    z-index: 1000;
+}
+
+.headerAuthDropdown.open .formContainer.compact {
+    display: block;
+}
+
+.formContainer.compact .formTabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    border-bottom: none;
+}
+
+.formContainer.compact .tabButton {
+    padding: 6px 8px;
+    font-size: 12px;
+}
+
+/* Show labels in compact form but smaller */
+.formContainer.compact .formGroup label {
+    display: block;
+    font-size: 10px;
+    margin-bottom: 2px;
+    color: #FFCCCC;
+}
+
+.formContainer.compact .formGroup input {
+    padding: 8px;
+    font-size: 13px;
+}
+
+.formContainer.compact .submitBtn {
+    padding: 8px;
+    font-size: 14px;
+}

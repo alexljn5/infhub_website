@@ -17,9 +17,9 @@ serverBoxes.forEach(box => {
             box.classList.remove('clicked');
         }, 200);
 
-        // Optional: Do something at certain click counts
-        if (clickCounts[serverId] % 5 === 0) {
-            console.log(`You've clicked ${serverId} ${clickCounts[serverId]} times!`);
+        // Redirect based on server ID
+        if (serverId === 'infcraftBox') {
+            window.location.href = 'php/pages/infcraft.php';
         }
     });
 

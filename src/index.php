@@ -61,7 +61,7 @@ if (file_exists($path)) {
         </div>
     </div>
 
-    <?php include('./php/footer.php'); ?>
+    <?php include('./php/templates/footer.php'); ?>
 </body>
 
 </html>
