@@ -52,9 +52,9 @@ if (file_exists($path)) {
             <img src="./img/logo/infcraft/infcraft_logo.png" alt="INFCRAFT" class="serverImage">
             <p>INFCRAFT</p>
         </div>
-        <div class="serverBox" id="serverBox2" data-server="server2">
-            <img src="./img/misc/pixel_art_burger.png" alt="Server 2" class="serverImage">
-            <p>Server 2</p>
+        <div class="serverBox" id="inftaleBox" data-server="inftale">
+            <img src="./img/misc/pixel_art_burger.png" alt="INFTALE" class="serverImage">
+            <p>INFTALE</p>
         </div>
         <div class="serverBox" id="serverBox3" data-server="server3">
             <img src="./img/misc/pixel_art_burger.png" alt="Server 3" class="serverImage">

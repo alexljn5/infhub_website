@@ -1,14 +1,18 @@
 FROM php:8.5-apache
 
-# Install any extensions you might need, like for databases or whatever your assignment requires
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     libzip-dev \
-    && docker-php-ext-install zip pdo_mysql
+    && docker-php-ext-install zip pdo_mysql \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy your PHP files into the container
+# Enable Apache mod_rewrite (useful for routing later)
+RUN a2enmod rewrite
+
+# Copy source
 COPY src/ /var/www/html/
 
-# Set permissions if needed
+# Permissions
 RUN chown -R www-data:www-data /var/www/html
 
 EXPOSE 80

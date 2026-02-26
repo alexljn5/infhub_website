@@ -110,6 +110,15 @@ body {
     box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
 }
 
+#inftaleBox {
+    border-color: #FF0000;
+}
+
+#inftaleBox:hover {
+    border-color: #FF0000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
 .serverImage {
     width: 128px;
     height: 128px;
