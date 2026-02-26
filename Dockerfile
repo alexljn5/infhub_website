@@ -1,4 +1,4 @@
-FROM php:8.4-apache
+FROM php:8.5-apache
 
 # Install any extensions you might need, like for databases or whatever your assignment requires
 RUN apt-get update && apt-get install -y \

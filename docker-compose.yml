@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   php-app:
     build: .
@@ -15,7 +13,7 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: infcraft_db
+      MYSQL_DATABASE: infhub_database
     ports:
       - "3306:3306"
     volumes:

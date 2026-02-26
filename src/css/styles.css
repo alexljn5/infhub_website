@@ -1,0 +1,142 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.logoContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid white;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px auto;
+}
+
+.asciiWrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.bunnyAsciiLeft,
+.bunnyAsciiRight {
+    font-family: monospace;
+    font-size: 8px;
+    line-height: 0.4;
+    white-space: pre;
+    margin: 0;
+    padding: 0;
+    color: white;
+}
+
+.bunnyAsciiRight {
+    transform: scaleX(-1);
+    display: inline-block;
+    /* required so transform behaves correctly */
+}
+
+.logoAscii {
+    font-family: monospace;
+    font-size: 10px;
+    line-height: 0.5;
+    text-align: center;
+    white-space: pre;
+    margin: 0;
+    padding: 0;
+    color: white;
+    width: 200%;
+}
+
+.logoImage {
+    display: flex;
+    justify-self: center;
+    width: 128px;
+    height: auto;
+}
+
+.boxContainers {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+}
+
+.serverBox {
+    background-color: #333;
+    border: 3px solid #457c46;
+    border-radius: 8px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+    text-align: center;
+    min-width: 150px;
+}
+
+.serverBox:hover {
+    border-color: #00FF00;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+    transform: scale(1.05);
+}
+
+.serverBox.clicked {
+    transform: scale(0.95);
+}
+
+.serverBox p {
+    margin: 10px 0 0 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* INFCRAFT specific styling */
+#infcraftBox {
+    border-color: #FF0000;
+}
+
+#infcraftBox:hover {
+    border-color: #FF0000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+.serverImage {
+    width: 128px;
+    height: 128px;
+    display: block;
+    margin: 0 auto;
+}
+
+header {
+    background-color: #457c46;
+    color: rgb(250, 0, 0);
+    padding: 20px;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+header h1 {
+    margin: 0;
+}
+
+/* Your footer styles if needed */
+footer {
+    background-color: #000000;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
