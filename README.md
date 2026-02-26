@@ -1,2 +1,2 @@
 # infcraft-website
-Official website for the INFCRAFT Server
+Official website for the INFHUB project/
