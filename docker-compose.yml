@@ -25,7 +25,7 @@ services:
       --default-storage-engine=InnoDB
     volumes:
       - db-data:/var/lib/mysql
-      - ./database:/docker-entrypoint-initdb.d
+      - ./src/database:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD}"]
       interval: 5s
