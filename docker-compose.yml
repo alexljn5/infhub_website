@@ -32,5 +32,19 @@ services:
       timeout: 5s
       retries: 10
 
+  lounge:
+    image: ghcr.io/thelounge/thelounge:latest
+    container_name: infhub_lounge
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - lounge-data:/var/opt/thelounge
+    environment:
+      - THELOUNGE_HOME=/var/opt/thelounge
+    depends_on:
+      - db
+
 volumes:
   db-data:
+  lounge-data:

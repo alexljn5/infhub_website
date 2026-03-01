@@ -56,9 +56,9 @@ if (file_exists($path)) {
             <img src="./img/misc/pixel_art_burger.png" alt="INFTALE" class="serverImage">
             <p>INFTALE</p>
         </div>
-        <div class="serverBox" id="serverBox3" data-server="server3">
-            <img src="./img/misc/pixel_art_burger.png" alt="Server 3" class="serverImage">
-            <p>Server 3</p>
+        <div class="serverBox" id="infrrariaBox" data-server="infrraria">
+            <img src="./img/misc/pixel_art_burger.png" alt="INFRRARIA" class="serverImage">
+            <p>INFRRARIA</p>
         </div>
     </div>
 

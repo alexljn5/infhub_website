@@ -8,8 +8,11 @@
     <link rel="icon" type="image/ico" href="../../../../img/logo/favicon.ico">
     <link rel="stylesheet" href="../../../../css/infcraft/infcraft.css">
     <script src="../../../../js/infcraft/infcraft_registration_login_form.js" defer></script>
+    <script src="../../../../js/infcraft/infcraft_main.js" defer></script>
 </head>
 <?php include('../../templates/infcraft/infcraft_header.php'); ?>
+
+<?php include('../../templates/infcraft/infcraft_auth_controls.php'); ?>
 
 <body>
     <div class="mainContent">
