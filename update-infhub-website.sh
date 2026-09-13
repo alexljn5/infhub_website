@@ -164,7 +164,7 @@ if ! docker compose version >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ ! -f "$COMPOSE_FILE" ]]; then
+if [ ! -f "$COMPOSE_FILE" ]; then
     err "docker-compose.yml not found:"
     echo "  $COMPOSE_FILE"
     exit 1
@@ -193,14 +193,15 @@ step "Database backup"
 
 response=$(ask "  Create a database backup before updating?" "Y")
 
-if [[ ! "$response" =~ ^[nN] ]]; then
+case "$response" in
+    [nN]*)
 
     mkdir -p "$BACKUP_DIR"
 
     backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
     db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
 
-    if [[ ! -f "$ENV_FILE" ]]; then
+    if [ ! -f "$ENV_FILE" ]; then
         warn ".env not found; cannot automatically determine DB root password."
         info "Skipping database backup."
     else
@@ -210,7 +211,7 @@ if [[ ! "$response" =~ ^[nN] ]]; then
                 | cut -d'=' -f2-
         )"
 
-        if [[ -z "$DB_ROOT_PASS" ]]; then
+        if [ -z "$DB_ROOT_PASS" ]; then
             warn "DB_ROOT_PASSWORD is not defined in .env."
             info "Skipping database backup."
         else
@@ -229,7 +230,7 @@ if [[ ! "$response" =~ ^[nN] ]]; then
                     infhub_database \
                     > "$db_backup"; then
 
-                    if [[ -s "$db_backup" ]]; then
+                    if [ -s "$db_backup" ]; then
                         ok "Database backed up:"
                         echo "    $db_backup"
                     else
@@ -260,7 +261,8 @@ step "Pulling latest Docker images..."
 
 response=$(ask "  Pull latest images (docker compose pull)?" "Y")
 
-if [[ ! "$response" =~ ^[nN] ]]; then
+case "$response" in
+    [nN]*)
 
     docker compose \
         -f "$COMPOSE_FILE" \
@@ -283,7 +285,8 @@ response=$(ask \
     "Y"
 )
 
-if [[ ! "$response" =~ ^[nN] ]]; then
+case "$response" in
+    [nN]*)
 
     docker compose \
         -f "$COMPOSE_FILE" \
@@ -298,7 +301,8 @@ else
         "Y"
     )
 
-    if [[ ! "$response" =~ ^[nN] ]]; then
+    case "$response" in
+        [nN]*)
 
         docker compose \
             -f "$COMPOSE_FILE" \

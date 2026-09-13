@@ -1,21 +1,14 @@
 # ============================================================
 # INFHUB Unified Dockerfile
-#
-# Build targets:
-#   php-app  -> Apache + PHP website
-#   inspircd -> InspIRCd IRC server
-#
-# docker-compose.yml selects the appropriate target.
 # ============================================================
 
 
 # ============================================================
-# PHP / APACHE WEBSITE
+# PHP APPLICATION
 # ============================================================
 
 FROM php:8.4-apache AS php-app
 
-# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     libzip-dev \
     libcurl4-openssl-dev \
@@ -29,16 +22,12 @@ RUN apt-get update && apt-get install -y \
     mbstring \
     && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Copy website source
 COPY src/ /var/www/html/
 
-# Permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Healthcheck
 HEALTHCHECK \
     --interval=30s \
     --timeout=5s \
@@ -66,16 +55,32 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Create the unprivileged account/group that InspIRCd
+# expects at configure time.
+RUN groupadd --system inspircd \
+    && useradd \
+    --system \
+    --gid inspircd \
+    --home-dir /opt/inspircd \
+    --shell /usr/sbin/nologin \
+    inspircd
+
 WORKDIR /build
 
-# Copy the existing InspIRCd source tree
+# Copy the complete local InspIRCd source tree.
 COPY inspircd/ /build/inspircd/
 
 WORKDIR /build/inspircd
 
-# Build InspIRCd
+# Configure, compile and install InspIRCd.
+#
+# --prefix controls where the compiled installation goes.
+# --uid / --gid tell InspIRCd which unprivileged account/group
+# it should use at runtime.
 RUN ./configure \
     --prefix=/opt/inspircd \
+    --uid=inspircd \
+    --gid=inspircd \
     && make -j"$(nproc)" \
     && make install
 
@@ -94,25 +99,19 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Dedicated user
-RUN useradd \
+# Create runtime user/group.
+RUN groupadd --system inspircd \
+    && useradd \
     --system \
-    --home /opt/inspircd \
+    --gid inspircd \
+    --home-dir /opt/inspircd \
     --shell /usr/sbin/nologin \
-    inspircd \
-    && mkdir -p \
-    /opt/inspircd \
-    /var/lib/inspircd \
-    /var/log/inspircd \
-    && chown -R inspircd:inspircd \
-    /opt/inspircd \
-    /var/lib/inspircd \
-    /var/log/inspircd
+    inspircd
 
-# Copy compiled InspIRCd
+# Copy the compiled InspIRCd installation.
 COPY --from=inspircd-build /opt/inspircd/ /opt/inspircd/
 
-# Runtime directories
+# Runtime directories.
 RUN mkdir -p \
     /opt/inspircd/run \
     /opt/inspircd/data \
@@ -127,5 +126,4 @@ EXPOSE 6667 6697
 
 USER inspircd
 
-# InspIRCd normally uses the executable in the installation root.
 CMD ["/opt/inspircd/inspircd"]
