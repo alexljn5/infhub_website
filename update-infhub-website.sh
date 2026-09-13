@@ -195,63 +195,64 @@ response=$(ask "  Create a database backup before updating?" "Y")
 
 case "$response" in
     [nN]*)
+        info "Skipping database backup"
+        ;;
+    *)
+        mkdir -p "$BACKUP_DIR"
 
-    mkdir -p "$BACKUP_DIR"
+        backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
+        db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
 
-    backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
-    db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
-
-    if [ ! -f "$ENV_FILE" ]; then
-        warn ".env not found; cannot automatically determine DB root password."
-        info "Skipping database backup."
-    else
-        DB_ROOT_PASS="$(
-            grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" \
-                | head -n1 \
-                | cut -d'=' -f2-
-        )"
-
-        if [ -z "$DB_ROOT_PASS" ]; then
-            warn "DB_ROOT_PASSWORD is not defined in .env."
+        if [ ! -f "$ENV_FILE" ]; then
+            warn ".env not found; cannot automatically determine DB root password."
             info "Skipping database backup."
         else
+            DB_ROOT_PASS="$(
+                grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" \
+                    | head -n1 \
+                    | cut -d'=' -f2-
+            )"
 
-            # Make sure the DB service exists/runs.
-            if docker compose -f "$COMPOSE_FILE" ps --status running db \
-                --format '{{.Name}}' | grep -q .; then
+            if [ -z "$DB_ROOT_PASS" ]; then
+                warn "DB_ROOT_PASSWORD is not defined in .env."
+                info "Skipping database backup."
+            else
 
-                info "Creating MariaDB backup..."
+                # Make sure the DB service exists/runs.
+                if docker compose -f "$COMPOSE_FILE" ps --status running db \
+                    --format '{{.Name}}' | grep -q .; then
 
-                if docker compose -f "$COMPOSE_FILE" exec -T \
-                    -e MYSQL_PWD="$DB_ROOT_PASS" \
-                    db \
-                    mariadb-dump \
-                    -u root \
-                    infhub_database \
-                    > "$db_backup"; then
+                    info "Creating MariaDB backup..."
 
-                    if [ -s "$db_backup" ]; then
-                        ok "Database backed up:"
-                        echo "    $db_backup"
+                    if docker compose -f "$COMPOSE_FILE" exec -T \
+                        -e MYSQL_PWD="$DB_ROOT_PASS" \
+                        db \
+                        mariadb-dump \
+                        -u root \
+                        infhub_database \
+                        > "$db_backup"; then
+
+                        if [ -s "$db_backup" ]; then
+                            ok "Database backed up:"
+                            echo "    $db_backup"
+                        else
+                            warn "Backup file is empty."
+                            rm -f "$db_backup"
+                        fi
+
                     else
-                        warn "Backup file is empty."
+                        warn "Database backup failed."
                         rm -f "$db_backup"
                     fi
 
                 else
-                    warn "Database backup failed."
-                    rm -f "$db_backup"
+                    warn "MariaDB container is not currently running."
+                    info "Skipping database backup."
                 fi
-
-            else
-                warn "MariaDB container is not currently running."
-                info "Skipping database backup."
             fi
         fi
-    fi
-else
-    info "Skipping database backup"
-fi
+        ;;
+esac
 
 # ------------------------------------------------------------
 # Pull images
@@ -263,16 +264,16 @@ response=$(ask "  Pull latest images (docker compose pull)?" "Y")
 
 case "$response" in
     [nN]*)
+        info "Skipping image pull"
+        ;;
+    *)
+        docker compose \
+            -f "$COMPOSE_FILE" \
+            pull
 
-    docker compose \
-        -f "$COMPOSE_FILE" \
-        pull
-
-    ok "Docker images pulled"
-
-else
-    info "Skipping image pull"
-fi
+        ok "Docker images pulled"
+        ;;
+esac
 
 # ------------------------------------------------------------
 # Rebuild and restart
@@ -287,33 +288,32 @@ response=$(ask \
 
 case "$response" in
     [nN]*)
+        response=$(ask \
+            "  Restart without rebuilding (docker compose up -d)?" \
+            "Y"
+        )
 
-    docker compose \
-        -f "$COMPOSE_FILE" \
-        up -d --build
+        case "$response" in
+            [nN]*)
+                info "Skipping restart"
+                ;;
+            *)
+                docker compose \
+                    -f "$COMPOSE_FILE" \
+                    up -d
 
-    ok "Stack rebuilt and started"
-
-else
-
-    response=$(ask \
-        "  Restart without rebuilding (docker compose up -d)?" \
-        "Y"
-    )
-
-    case "$response" in
-        [nN]*)
-
+                ok "Stack started"
+                ;;
+        esac
+        ;;
+    *)
         docker compose \
             -f "$COMPOSE_FILE" \
-            up -d
+            up -d --build
 
-        ok "Stack started"
-
-    else
-        info "Skipping restart"
-    fi
-fi
+        ok "Stack rebuilt and started"
+        ;;
+esac
 
 # ------------------------------------------------------------
 # Wait for services
