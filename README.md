@@ -35,7 +35,7 @@ containers on the `infhub-network`.
 
 ```bash
 cd ~/INFHUB/infhub-website
-./start-infhub-website.sh
+bash start-infhub-website.sh
 ```
 
 This will:
@@ -58,13 +58,13 @@ This will:
 ### Script Options
 
 ```bash
-./start-infhub-website.sh --yes        # Non-interactive (cron-friendly)
-./start-infhub-website.sh --no-build   # Skip image rebuild
-./start-infhub-website.sh --help       # Show help
+bash start-infhub-website.sh --yes        # Non-interactive (cron-friendly)
+bash start-infhub-website.sh --no-build   # Skip image rebuild
+bash start-infhub-website.sh --help       # Show help
 
-./stop-infhub-website.sh --force       # Stop without confirmation
+bash stop-infhub-website.sh --force       # Stop without confirmation
 
-./update-infhub-website.sh --yes       # Non-interactive update
+bash update-infhub-website.sh --yes       # Non-interactive update
 ```
 
 All scripts use absolute paths and work from cron/non-interactive shells.
@@ -95,12 +95,10 @@ mounted at `/etc/ssl/certs/irc.crt` inside the TheLounge container.
 InspIRCd config is bind-mounted from the host at:
 `/home/alexljn5/INFHUB/inf_irc/inspircd/run`
 
-The InspIRCd binary is built into the Docker image from `inspircd/Dockerfile`.
-To rebuild the image after updating the binary:
+The InspIRCd image is built from the `inspircd` target in the root `Dockerfile`.
+To rebuild it:
 
 ```bash
-cp /home/alexljn5/INFHUB/inf_irc/inspircd/inspircd inspircd/
-cp -r /home/alexljn5/INFHUB/inf_irc/inspircd/modules/*.so inspircd/modules/
 docker compose build inspircd
 ```
 

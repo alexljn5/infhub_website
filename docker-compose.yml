@@ -19,7 +19,10 @@
 
 services:
   php-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: php-app
     container_name: infhub-website-php-app-1
     ports:
       - "8080:80"
@@ -74,8 +77,9 @@ services:
 
   inspircd:
     build:
-      context: ./inspircd
+      context: .
       dockerfile: Dockerfile
+      target: inspircd
     container_name: infhub-website-inspircd-1
     restart: always
     ports:

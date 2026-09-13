@@ -4,7 +4,6 @@
 notes.txt
 legalfluff.txt
 irc_commands.txt
-Dockerfile
 docker-compose.yml
 .dockerignore
 README.md

@@ -12,9 +12,9 @@
 #   - lounge
 #
 # Usage:
-#   ./update-infhub-website.sh
-#   ./update-infhub-website.sh --yes
-#   ./update-infhub-website.sh --help
+#   bash update-infhub-website.sh
+#   bash update-infhub-website.sh --yes
+#   bash update-infhub-website.sh --help
 #
 # Safety:
 #   - Never removes Docker volumes
@@ -54,6 +54,8 @@ for arg in "$@"; do
 Usage: $0 [OPTIONS]
 
 Update the complete INFHUB Docker Compose stack.
+
+Prompts accept Y/yes or N/no. Press Enter to use the displayed default.
 
 Options:
   --yes       Non-interactive mode
@@ -109,14 +111,40 @@ info() {
 ask() {
     local prompt="$1"
     local default="${2:-Y}"
+    local display_default="[Y/N] (default: $default)"
 
     if [[ "$AUTO_YES" == true ]]; then
-        echo "$default"
+        case "$default" in
+            [Yy]*) echo "Y" ;;
+            *) echo "N" ;;
+        esac
         return
     fi
 
-    read -rp "$prompt [$default] " response
-    echo "${response:-$default}"
+    while true; do
+        read -r -p "$prompt $display_default " response
+
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                echo "Y"
+                return
+                ;;
+            [nN]|[nN][oO])
+                echo "N"
+                return
+                ;;
+            "")
+                case "$default" in
+                    [Yy]*) echo "Y" ;;
+                    *) echo "N" ;;
+                esac
+                return
+                ;;
+            *)
+                echo "Please answer Y or N." >&2
+                ;;
+        esac
+    done
 }
 
 # ------------------------------------------------------------
