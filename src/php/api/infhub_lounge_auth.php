@@ -22,9 +22,9 @@ if (!$input || !isset($input['username'], $input['password'])) {
 $username = trim($input['username']);
 $password = $input['password'];
 
-// The Lounge server details
-$lounge_host = '213.197.11.201';
-$lounge_port = '9000';
+// The Lounge server details (uses environment variables from docker-compose)
+$lounge_host = getenv('LOUNGE_HOST') ?: 'localhost';
+$lounge_port = getenv('LOUNGE_PORT') ?: '9000';
 $lounge_url = "http://$lounge_host:$lounge_port/api/v4/auth/login";
 
 // Prepare The Lounge authentication request
@@ -46,7 +46,7 @@ curl_close($ch);
 
 if ($http_code === 200) {
     $lounge_response = json_decode($response, true);
-    
+
     // Successful authentication with The Lounge
     echo json_encode([
         'valid' => true,

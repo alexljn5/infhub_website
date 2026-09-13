@@ -21,11 +21,11 @@ if (!$input || !isset($input['username'], $input['password'])) {
 $username = trim($input['username']);
 $password = $input['password'];
 
-// Database connection
-$host = '127.0.0.1';
-$db = 'infhub_database';
-$user = 'your_db_user';
-$pass = 'your_db_password';
+// Database connection (uses environment variables from docker-compose)
+$host = getenv('DB_HOST') ?: '127.0.0.1';
+$db = getenv('DB_NAME') ?: 'infhub_database';
+$user = getenv('DB_USER') ?: 'infhub_user';
+$pass = getenv('DB_PASSWORD') ?: '';
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";

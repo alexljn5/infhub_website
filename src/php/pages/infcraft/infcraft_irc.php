@@ -12,8 +12,14 @@
 <body>
     <?php include('../../templates/infcraft/infcraft_header.php'); ?>
 
+    <?php
+    // Use Docker service name for The Lounge (falls back to localhost for local dev)
+    $lounge_host = getenv('LOUNGE_HOST') ?: 'localhost';
+    $lounge_port = getenv('LOUNGE_PORT') ?: '9000';
+    $lounge_url = "http://$lounge_host:$lounge_port";
+    ?>
     <div id="irc-container" style="width:100%; height:800px;">
-        <iframe src="http://213.197.11.201:9000" style="width:100%; height:100%; border:none;" title="INFHUB IRC Chat">
+        <iframe src="<?php echo $lounge_url; ?>" style="width:100%; height:100%; border:none;" title="INFHUB IRC Chat">
         </iframe>
     </div>
 

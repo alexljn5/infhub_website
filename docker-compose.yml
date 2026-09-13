@@ -9,6 +9,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: infhub_database
+      DB_USER: infhub_user
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      LOUNGE_HOST: lounge
+      LOUNGE_PORT: 9000
+    networks:
+      - infhub-network
 
   db:
     image: mariadb:11
@@ -31,6 +41,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - infhub-network
 
   lounge:
     image: ghcr.io/thelounge/thelounge:latest
@@ -44,6 +56,12 @@ services:
       - THELOUNGE_HOME=/var/opt/thelounge
     depends_on:
       - db
+    networks:
+      - infhub-network
+
+networks:
+  infhub-network:
+    driver: bridge
 
 volumes:
   db-data:
