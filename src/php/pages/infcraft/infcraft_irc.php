@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IRC Chat</title>
-    <link rel="icon" type="image/ico" href="../../../../img/logo/favicon.ico">
-    <link rel="stylesheet" href="../../../../css/infcraft/infcraft.css">
+    <link rel="icon" type="image/ico" href="/img/logo/favicon.ico">
+    <link rel="stylesheet" href="/css/infcraft/infcraft.css">
 </head>
 
 <body>
