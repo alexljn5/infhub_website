@@ -69,8 +69,6 @@ COPY inspircd/inspircd-4.9.0/ /build/inspircd/
 
 WORKDIR /build/inspircd
 
-RUN rm -rf src/modules
-
 RUN ./configure \
     --prefix=/opt/inspircd \
     --uid=inspircd \
