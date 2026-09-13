@@ -74,9 +74,11 @@ RUN ./configure \
     --prefix=/opt/inspircd \
     --uid=inspircd \
     --gid=inspircd \
+    --disable-auto-extras \
+    && ./configure \
+    --enable-extras "ssl_openssl sslrehashsignal log_syslog regex_posix" \
     && make -j"$(nproc)" \
     && make install
-
 
 # ============================================================
 # INSPIRCD RUNTIME
