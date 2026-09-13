@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to the INFHUB project!</title>
-    <link rel="icon" type="image/ico" href="../../../../img/logo/favicon.ico">
-    <link rel="stylesheet" href="../../../../css/infcraft/infcraft.css">
-    <script src="../../../../js/infcraft/infcraft_registration_login_form.js" defer></script>
-    <script src="../../../../js/infcraft/infcraft_main.js" defer></script>
+    <link rel="icon" type="image/ico" href="/img/logo/favicon.ico">
+    <link rel="stylesheet" href="/css/infcraft/infcraft.css">
+    <script src="/js/infcraft/infcraft_registration_login_form.js" defer></script>
+    <script src="/js/infcraft/infcraft_main.js" defer></script>
 </head>
 <?php include('../../templates/infcraft/infcraft_header.php'); ?>
 
