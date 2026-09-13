@@ -2,22 +2,40 @@
 # ============================================================
 # INFHUB Homelab — Start Script
 # ============================================================
-# Starts the INFHUB Docker stack: php-app (web), db (MariaDB),
-# lounge (The Lounge IRC).
+# Starts the complete INFHUB Docker Compose stack:
+#   - php-app: Apache + PHP 8.4 website (port 8080)
+#   - db: MariaDB 11 (internal only)
+#   - inspircd: InspIRCd 4.x IRC server (ports 6667, 6697)
+#   - lounge: The Lounge IRC web client (port 9000)
 #
 # Usage:
 #   ./start-infhub-website.sh          # Interactive startup
 #   ./start-infhub-website.sh --yes    # Non-interactive
 #   ./start-infhub-website.sh --help   # Show help
+#
+# Notes:
+#   - Stops any existing screen-based TheLounge before starting
+#   - Backs up existing InspIRCd and TheLounge configs before starting
+#   - Uses absolute paths for cron/non-interactive execution
 # ============================================================
 
 set -euo pipefail
 
-# --- Configuration ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# --- Absolute Paths ---
+SCRIPT_DIR="/home/alexljn5/INFHUB/infhub-website"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
-ENV_EXAMPLE="$SCRIPT_DIR/.env.example"
 ENV_FILE="$SCRIPT_DIR/.env"
+ENV_EXAMPLE="$SCRIPT_DIR/.env.example"
+
+# Paths for backup and config preservation
+THELOUNGE_HOME="/home/alexljn5/.thelounge"
+INSPIRCD_HOME="/home/alexljn5/INFHUB/inf_irc/inspircd"
+BACKUP_DIR="$SCRIPT_DIR/backups"
+
+# Screen-based TheLounge process check
+SCREEN_SESSION="thelounge"
+
+# Health check settings
 MAX_RETRIES=60
 RETRY_INTERVAL=2
 
@@ -34,7 +52,7 @@ for arg in "$@"; do
             cat <<EOF
 Usage: ./start-infhub-website.sh [--no-build] [--yes] [--help]
 
-  Start the INFHUB homelab stack (php-app, db, lounge).
+  Start the complete INFHUB stack (website, database, InspIRCd, TheLounge).
 
   Options:
     --no-build     Skip rebuilding images (use existing)
@@ -76,7 +94,7 @@ ask() {
 
 # --- Step 1: Pre-flight Checks ---
 step "=== INFHUB Homelab Startup ==="
-echo "Working directory: $SCRIPT_DIR"
+echo "Stack directory: $SCRIPT_DIR"
 
 # Check Docker
 step "Checking prerequisites..."
@@ -95,7 +113,7 @@ else
 fi
 
 if [[ ! -f "$COMPOSE_FILE" ]]; then
-    err "docker-compose.yml not found in $SCRIPT_DIR"
+    err "docker-compose.yml not found at $COMPOSE_FILE"
     exit 1
 fi
 ok "docker-compose.yml found"
@@ -104,7 +122,7 @@ ok "docker-compose.yml found"
 step "Checking environment configuration..."
 
 if [[ -f "$ENV_FILE" ]]; then
-    ok ".env file already exists"
+    ok ".env file exists"
     if grep -q "DB_ROOT_PASSWORD=change_me_to_a_strong_password" "$ENV_FILE" 2>/dev/null; then
         warn "DB_ROOT_PASSWORD is still the default — update it!"
     else
@@ -127,101 +145,245 @@ else
     fi
 fi
 
-# --- Step 3: Optional Git Pull ---
-step "Checking for updates..."
-if [[ -d "$SCRIPT_DIR/.git" ]]; then
-    response=$(ask "  Pull latest changes from git?" "Y")
+# --- Step 3: Stop Screen-based TheLounge ---
+step "Checking for screen-based TheLounge..."
+if screen -list 2>/dev/null | grep -q "$SCREEN_SESSION"; then
+    response=$(ask "  Found screen session '$SCREEN_SESSION'. Stop it before starting Docker-managed TheLounge?" "Y")
     if [[ ! "$response" =~ ^[nN] ]]; then
-        echo "  Running git pull..."
-        if git pull; then
-            ok "Git pull successful"
+        echo "  Stopping screen session..."
+        screen -X -S "$SCREEN_SESSION" quit 2>/dev/null || screen -S "$SCREEN_SESSION" -X quit 2>/dev/null || true
+        sleep 2
+        if screen -list 2>/dev/null | grep -q "$SCREEN_SESSION"; then
+            warn "Screen session still exists — killing process"
+            pkill -f "thelounge start" 2>/dev/null || true
+            sleep 1
+        fi
+        ok "Screen-based TheLounge stopped"
+    else
+        warn "Screen-based TheLounge is still running — port 9000 may conflict"
+    fi
+else
+    info "No screen-based TheLounge found"
+fi
+
+# Also check for any running thelounge process
+if pgrep -f "thelounge" &>/dev/null; then
+    response=$(ask "  Found running TheLounge process. Kill it?" "Y")
+    if [[ ! "$response" =~ ^[nN] ]]; then
+        echo "  Killing TheLounge processes..."
+        pkill -f "thelounge" 2>/dev/null || true
+        sleep 2
+        ok "TheLounge processes stopped"
+    fi
+fi
+
+# --- Step 4: Backup Existing Configs ---
+step "Backing up existing configurations..."
+mkdir -p "$BACKUP_DIR"
+backup_ts=$(date +%F_%H%M)
+
+# Backup TheLounge config
+if [[ -d "$THELOUNGE_HOME" ]]; then
+    thelounge_backup="$BACKUP_DIR/thelounge-backup-$backup_ts"
+    echo "  Backing up TheLounge config to $thelounge_backup..."
+    cp -a "$THELOUNGE_HOME" "$thelounge_backup" 2>/dev/null
+    if [[ $? -eq 0 ]]; then
+        ok "TheLounge config backed up"
+    else
+        warn "TheLounge backup failed"
+    fi
+else
+    info "No existing TheLounge config found at $THELOUNGE_HOME"
+fi
+
+# Backup InspIRCd config
+if [[ -d "$INSPIRCD_HOME" ]]; then
+    inspircd_backup="$BACKUP_DIR/inspircd-backup-$backup_ts"
+    echo "  Backing up InspIRCd config to $inspircd_backup..."
+    cp -a "$INSPIRCD_HOME" "$inspircd_backup" 2>/dev/null
+    if [[ $? -eq 0 ]]; then
+        ok "InspIRCd config backed up"
+    else
+        warn "InspIRCd backup failed"
+    fi
+else
+    info "No existing InspIRCd config found at $INSPIRCD_HOME"
+fi
+
+# Backup database (optional)
+if [[ -f "$ENV_FILE" ]]; then
+    DB_ROOT_PASS=$(grep "^DB_ROOT_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2-)
+    if [[ -n "$DB_ROOT_PASS" ]]; then
+        db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
+        echo "  Backing up database to $db_backup..."
+        docker compose -f "$COMPOSE_FILE" exec -T db mariadb-dump -u root -p"$DB_ROOT_PASS" infhub_database > "$db_backup" 2>/dev/null || true
+        if [[ -f "$db_backup" && -s "$db_backup" ]]; then
+            ok "Database backed up"
         else
-            warn "Git pull failed — continuing with existing code"
+            warn "Database backup failed or empty — continuing"
+            rm -f "$db_backup"
         fi
     fi
-else
-    info "Not a git repository — skipping git pull"
 fi
 
-# --- Step 4: Stop any running containers ---
-step "Checking for existing containers..."
-if docker compose ps --format json &>/dev/null && [[ -n "$(docker compose ps --format json 2>/dev/null)" ]]; then
-    response=$(ask "  Containers are already running. Stop and restart?" "Y")
+# --- Step 5: Stop Existing Compose Stack ---
+step "Checking for existing Compose stack..."
+existing=$(docker compose -f "$COMPOSE_FILE" ps --format json 2>/dev/null || echo "")
+if [[ -n "$existing" && "$existing" != "[]" ]]; then
+    response=$(ask "  Compose stack is running. Stop and restart?" "Y")
     if [[ ! "$response" =~ ^[nN] ]]; then
-        echo "  Stopping existing containers..."
-        docker compose down 2>&1 || docker compose down --remove-orphans 2>&1
-        ok "Existing containers stopped"
+        echo "  Stopping existing Compose stack..."
+        docker compose -f "$COMPOSE_FILE" down 2>&1 || docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>&1
+        ok "Existing Compose stack stopped"
     fi
 else
-    info "No existing containers found"
+    info "No existing Compose stack found"
 fi
 
-# --- Step 5: Build & Start ---
+# Remove any orphaned containers with old names
+for container in infhub_lounge infhub-website-lounge-1; do
+    if docker inspect "$container" &>/dev/null 2>&1; then
+        response=$(ask "  Removing orphaned container '$container'?" "Y")
+        if [[ ! "$response" =~ ^[nN] ]]; then
+            echo "  Removing $container..."
+            docker rm -f "$container" 2>/dev/null || true
+            ok "Removed $container"
+        fi
+    fi
+done
+
+# --- Step 6: Build & Start ---
 step "Building and starting the stack..."
 echo "  This may take a few minutes on first run (image builds + DB init)..."
 
 if [[ "$NO_BUILD" == true ]]; then
-    docker compose up -d
+    docker compose -f "$COMPOSE_FILE" up -d
 else
-    docker compose up -d --build
+    docker compose -f "$COMPOSE_FILE" up -d --build
 fi
 ok "Stack build and start command issued"
 
-# --- Step 6: Wait for Database Health ---
-step "Waiting for database to become healthy..."
+# --- Step 7: Wait for Services Health ---
+step "Waiting for services to become healthy..."
 
+# Wait for DB
 db_healthy=false
 elapsed=0
-
 for ((i=0; i<MAX_RETRIES; i++)); do
     sleep "$RETRY_INTERVAL"
     elapsed=$((elapsed + RETRY_INTERVAL))
-
     health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-db-1 2>/dev/null || echo "")
     if [[ "$health" == "healthy" ]]; then
         db_healthy=true
         break
     fi
-
     container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-db-1 2>/dev/null || echo "")
     if [[ "$container_status" != "running" ]]; then
         err "Database container is not running (status: $container_status)"
-        echo "  Check logs: docker compose logs db"
+        echo "  Check logs: docker compose -f $COMPOSE_FILE logs db"
         exit 1
     fi
-
-    echo -n "  ...waiting ($elapsed seconds elapsed)..."
+    echo -n "  DB... waiting ($elapsed seconds)..."
 done
-
-echo ""  # newline after waiting
-
+echo ""
 if [[ "$db_healthy" == true ]]; then
-    ok "Database is healthy after $elapsed seconds"
+    ok "Database healthy after $elapsed seconds"
 else
     err "Database did not become healthy within $MAX_RETRIES seconds"
-    echo "  Check logs: docker compose logs db"
-    echo "  Check status: docker compose ps"
     exit 1
 fi
 
-# --- Step 7: Verify All Services ---
-step "Verifying all services..."
-
-php_status=$(docker inspect --format='{{.State.Status}}' infhub-website-php-app-1 2>/dev/null || echo "")
-if [[ "$php_status" == "running" ]]; then
-    ok "php-app (web) is running"
+# Wait for InspIRCd
+inspircd_healthy=false
+elapsed=0
+for ((i=0; i<MAX_RETRIES; i++)); do
+    sleep "$RETRY_INTERVAL"
+    elapsed=$((elapsed + RETRY_INTERVAL))
+    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-inspircd-1 2>/dev/null || echo "")
+    if [[ "$health" == "healthy" ]]; then
+        inspircd_healthy=true
+        break
+    fi
+    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-inspircd-1 2>/dev/null || echo "")
+    if [[ "$container_status" != "running" ]]; then
+        err "InspIRCd container is not running (status: $container_status)"
+        echo "  Check logs: docker compose -f $COMPOSE_FILE logs inspircd"
+        exit 1
+    fi
+    echo -n "  InspIRCd... waiting ($elapsed seconds)..."
+done
+echo ""
+if [[ "$inspircd_healthy" == true ]]; then
+    ok "InspIRCd healthy after $elapsed seconds"
 else
-    warn "php-app is not running (status: $php_status) — check logs"
+    err "InspIRCd did not become healthy within $MAX_RETRIES seconds"
+    echo "  Check logs: docker compose -f $COMPOSE_FILE logs inspircd"
+    exit 1
 fi
 
-lounge_status=$(docker inspect --format='{{.State.Status}}' infhub_lounge 2>/dev/null || echo "")
-if [[ "$lounge_status" == "running" ]]; then
-    ok "lounge (The Lounge IRC) is running"
+# Wait for Lounge
+lounge_healthy=false
+elapsed=0
+for ((i=0; i<MAX_RETRIES; i++)); do
+    sleep "$RETRY_INTERVAL"
+    elapsed=$((elapsed + RETRY_INTERVAL))
+    health=$(docker inspect --format='{{.State.Health.Status}}' infhub_lounge 2>/dev/null || echo "")
+    if [[ "$health" == "healthy" ]]; then
+        lounge_healthy=true
+        break
+    fi
+    container_status=$(docker inspect --format='{{.State.Status}}' infhub_lounge 2>/dev/null || echo "")
+    if [[ "$container_status" != "running" ]]; then
+        err "Lounge container is not running (status: $container_status)"
+        echo "  Check logs: docker compose -f $COMPOSE_FILE logs lounge"
+        exit 1
+    fi
+    echo -n "  Lounge... waiting ($elapsed seconds)..."
+done
+echo ""
+if [[ "$lounge_healthy" == true ]]; then
+    ok "Lounge healthy after $elapsed seconds"
 else
-    warn "lounge is not running (status: $lounge_status) — check logs"
+    warn "Lounge did not become healthy within $MAX_RETRIES seconds — check logs"
 fi
 
-# --- Step 8: Display Status ---
+# Wait for PHP app
+php_healthy=false
+elapsed=0
+for ((i=0; i<MAX_RETRIES; i++)); do
+    sleep "$RETRY_INTERVAL"
+    elapsed=$((elapsed + RETRY_INTERVAL))
+    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-php-app-1 2>/dev/null || echo "")
+    if [[ "$health" == "healthy" ]]; then
+        php_healthy=true
+        break
+    fi
+    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-php-app-1 2>/dev/null || echo "")
+    if [[ "$container_status" != "running" ]]; then
+        err "PHP app container is not running (status: $container_status)"
+        echo "  Check logs: docker compose -f $COMPOSE_FILE logs php-app"
+        exit 1
+    fi
+    echo -n "  PHP app... waiting ($elapsed seconds)..."
+done
+echo ""
+if [[ "$php_healthy" == true ]]; then
+    ok "PHP app healthy after $elapsed seconds"
+else
+    warn "PHP app did not become healthy within $MAX_RETRIES seconds — check logs"
+fi
+
+# --- Step 8: Verify TheLounge can reach InspIRCd ---
+step "Verifying TheLounge can reach InspIRCd..."
+irc_port_check=$(docker exec infhub_lounge nc -z inspircd 6667 2>&1 && echo "ok" || echo "fail")
+if [[ "$irc_port_check" == "ok" ]]; then
+    ok "TheLounge can reach InspIRCd on port 6667"
+else
+    warn "TheLounge may not reach InspIRCd yet — TheLounge config may need updating"
+    info "Check TheLounge networks.json points to inspircd:6667 (or inspircd:6697 for TLS)"
+fi
+
+# --- Step 9: Display Status ---
 step "=== Startup Complete ==="
 echo ""
 echo "  +---------------------------------------------------+"
@@ -232,24 +394,35 @@ echo "  Access your services:"
 echo ""
 echo "    Web Application    http://localhost:8080"
 echo "    The Lounge IRC     http://localhost:9000"
+echo "    InspIRCd Plain     irc://localhost:6667"
+echo "    InspIRCd TLS       irc://localhost:6697"
 echo "    INFCRAFT page    http://localhost:8080/infcraft"
 echo ""
 echo "  For production (with reverse proxy):"
 echo "    Web Application    http://infhub.org"
 echo "    The Lounge IRC     http://irc.infhub.org"
 echo ""
-echo "  Database (internal): infhub-website-db-1"
-echo "  Network:           infhub-network"
+echo "  Managed services:"
+echo "    Website/PHP:       infhub-website-php-app-1"
+echo "    Database:          infhub-website-db-1 (internal)"
+echo "    InspIRCd:          infhub-website-inspircd-1"
+echo "    TheLounge:         infhub_lounge"
+echo ""
+echo "  Persistent data:"
+echo "    Database:          db-data volume"
+echo "    InspIRCd data:     inspircd-data volume"
+echo "    TheLounge config:  /home/alexljn5/.thelounge"
+echo "    InspIRCd config:   /home/alexljn5/INFHUB/inf_irc/inspircd/run"
 echo ""
 echo "  Container Status:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose ps
+docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps
 echo ""
 
-# --- Step 9: Post-setup prompts ---
+# --- Step 10: Post-setup prompts ---
 response=$(ask "  Create a The Lounge admin user? (enter username, or n to skip)" "n")
 if [[ -n "$response" && "$response" != "n" && "$response" != "N" ]]; then
     echo "  Creating admin user '$response'..."
-    if docker compose exec lounge thelounge add "$response" 2>&1; then
+    if docker compose -f "$COMPOSE_FILE" exec lounge thelounge add "$response" 2>&1; then
         ok "Admin user '$response' created"
     else
         warn "Failed to create admin user — you can try again later"
@@ -259,18 +432,19 @@ fi
 response=$(ask "  View container logs? [y/N]" "N")
 if [[ "$response" == "y" || "$response" == "Y" ]]; then
     echo "  Starting log tail (Ctrl+C to stop)..."
-    docker compose logs -f
+    docker compose -f "$COMPOSE_FILE" logs -f
 fi
 
 echo ""
 echo "  Useful commands:"
-echo "    docker compose ps                  — View running containers"
-echo "    docker compose logs -f             — View all logs"
-echo "    docker compose logs -f lounge      — View lounge logs"
-echo "    docker compose restart             — Restart all services"
-echo "    ./stop-infhub-website.sh           — Stop all services"
-echo "    ./update-infhub-website.sh         — Pull updates and rebuild"
-echo "    docker compose exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
-echo "                                       — Access database"
+echo "    docker compose -f $COMPOSE_FILE ps                  — View running containers"
+echo "    docker compose -f $COMPOSE_FILE logs -f             — View all logs"
+echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge logs"
+echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"
+echo "    docker compose -f $COMPOSE_FILE restart             — Restart all services"
+echo "    ./stop-infhub-website.sh                          — Stop all services"
+echo "    ./update-infhub-website.sh                        — Pull updates and rebuild"
+echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
+echo "                                                       — Access database"
 echo ""
 echo "  Happy hacking! 🚀"

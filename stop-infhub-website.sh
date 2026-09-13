@@ -2,19 +2,27 @@
 # ============================================================
 # INFHUB Homelab — Stop Script
 # ============================================================
-# Stops the INFHUB Docker stack gracefully.
-# Data volumes are preserved — databases and lounge config survive.
+# Stops the complete INFHUB Docker Compose stack:
+#   - php-app: Apache + PHP 8.4 website
+#   - db: MariaDB 11
+#   - inspircd: InspIRCd 4.x IRC server
+#   - lounge: The Lounge IRC web client
+#
+# Data volumes are preserved — databases, IRC configs, and
+# TheLounge data survive container recreation.
 #
 # Usage:
 #   ./stop-infhub-website.sh            # Interactive stop
-#   ./stop-infhub-website.sh --force   # Stop without confirmation
-#   ./stop-infhub-website.sh --help    # Show help
+#   ./stop-infhub-website.sh --force    # Stop without confirmation
+#   ./stop-infhub-website.sh --help     # Show help
 # ============================================================
 
 set -euo pipefail
 
-# --- Configuration ---
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# --- Absolute Paths ---
+SCRIPT_DIR="/home/alexljn5/INFHUB/infhub-website"
+COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
+BACKUP_DIR="$SCRIPT_DIR/backups"
 
 # --- Flags ---
 FORCE=false
@@ -27,7 +35,7 @@ for arg in "$@"; do
             cat <<EOF
 Usage: ./stop-infhub-website.sh [--force] [--help]
 
-  Stop the INFHUB homelab stack (php-app, db, lounge).
+  Stop the complete INFHUB stack (website, database, InspIRCd, TheLounge).
   Data volumes are preserved.
 
   Options:
@@ -79,18 +87,22 @@ if ! command -v docker compose &>/dev/null; then
     exit 1
 fi
 
-cd "$SCRIPT_DIR"
-
 # --- Check if anything is running ---
 step "Checking running containers..."
-running=$(docker compose ps --format json 2>/dev/null || echo "")
+running=$(docker compose -f "$COMPOSE_FILE" ps --format json 2>/dev/null || echo "")
 if [[ -z "$running" || "$running" == "[]" ]]; then
-    info "No INFHUB containers are currently running."
+    info "No INFHUB containers are currently running via Compose."
+    # Check for orphaned containers
+    for container in infhub_lounge infhub-website-php-app-1 infhub-website-db-1 infhub-website-inspircd-1; do
+        if docker inspect "$container" &>/dev/null 2>&1; then
+            info "Found orphaned container: $container"
+        fi
+    done
     exit 0
 fi
 
 ok "Found running containers:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose ps
+docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps
 echo ""
 
 # --- Confirm ---
@@ -102,15 +114,19 @@ fi
 
 # --- Stop ---
 step "Stopping containers..."
-docker compose down
+docker compose -f "$COMPOSE_FILE" down
 ok "All INFHUB containers stopped."
 
 echo ""
 info "Data volumes are preserved:"
-echo "    Database data:     infhub-website-db-data"
-echo "    Lounge data:       infhub-website-lounge-data"
+echo "    Database data:     db-data volume"
+echo "    InspIRCd data:     inspircd-data volume"
+echo "    TheLounge config:  /home/alexljn5/.thelounge"
+echo "    InspIRCd config:   /home/alexljn5/INFHUB/inf_irc/inspircd/run"
+echo ""
+info "Backups are in: $BACKUP_DIR"
 echo ""
 info "To start again: ./start-infhub-website.sh"
-info "To remove all data: docker compose down -v"
+info "To remove all data: docker compose -f $COMPOSE_FILE down -v"
 echo ""
 ok "Done."
