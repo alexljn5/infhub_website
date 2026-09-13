@@ -76,8 +76,6 @@ RUN ./configure \
     --uid=inspircd \
     --gid=inspircd \
     --disable-auto-extras \
-    && ./configure \
-    --enable-extras "sslrehashsignal log_syslog regex_posix" \
     && make -j"$(nproc)" \
     && make install
 
