@@ -69,17 +69,7 @@ COPY inspircd/inspircd-4.9.0/ /build/inspircd/
 
 WORKDIR /build/inspircd
 
-# Repair module symlinks that point to the old host filesystem.
-RUN find src/modules -type l -exec sh -c \
-    'target="$(readlink "$1")"; \
-    case "$target" in \
-    /home/alexljn5/INFHUB/inf_irc/inspircd/*) \
-    relative="${target#/home/alexljn5/INFHUB/inf_irc/inspircd/}"; \
-    rm "$1"; \
-    ln -s "../../$relative" "$1"; \
-    ;; \
-    esac' \
-    sh {} \;
+RUN rm -rf src/modules
 
 RUN ./configure \
     --prefix=/opt/inspircd \
