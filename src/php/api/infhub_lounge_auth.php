@@ -23,9 +23,9 @@ $username = trim($input['username']);
 $password = $input['password'];
 
 // The Lounge server details (uses environment variables from docker-compose)
-$lounge_host = getenv('LOUNGE_HOST') ?: 'localhost';
-$lounge_port = getenv('LOUNGE_PORT') ?: '9000';
-$lounge_url = "http://$lounge_host:$lounge_port/api/v4/auth/login";
+$lounge_host = getenv('LOUNGE_HOST') ?: 'irc.infhub.org';
+$lounge_port = getenv('LOUNGE_PORT') ?: '443';
+$lounge_url = "https://$lounge_host:$lounge_port/api/v4/auth/login";
 
 // Prepare The Lounge authentication request
 $lounge_data = json_encode([

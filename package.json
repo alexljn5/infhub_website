@@ -1,21 +1,21 @@
 {
-    "name": "infcraft_website",
+    "name": "infhub_website",
     "version": "0.0.1",
-    "description": "Official website for INFCRAFT.",
+    "description": "Official website for INFHUB.",
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/alexljn5/infcraft-website.git"
+        "url": "git+https://github.com/alexljn5/infhub-website.git"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "type": "commonjs",
     "bugs": {
-        "url": "https://github.com/alexljn5/infcraft-website/issues"
+        "url": "https://github.com/alexljn5/infhub-website/issues"
     },
-    "homepage": "https://github.com/alexljn5/infcraft-website#readme"
+    "homepage": "https://github.com/alexljn5/infhub-website#readme"
 }
