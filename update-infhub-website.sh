@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # ============================================================
 # INFHUB Homelab — Update Script
@@ -24,13 +24,13 @@
 #   - Database backup is optional
 # ============================================================
 
-set -euo pipefail
+set -eu
 
 # ------------------------------------------------------------
 # Paths
 # ------------------------------------------------------------
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 ENV_FILE="$SCRIPT_DIR/.env"
 BACKUP_DIR="$SCRIPT_DIR/backups"
@@ -109,11 +109,11 @@ info() {
 }
 
 ask() {
-    local prompt="$1"
-    local default="${2:-Y}"
-    local display_default="[Y/N] (default: $default)"
+    prompt="$1"
+    default="${2:-Y}"
+    display_default="[Y/N] (default: $default)"
 
-    if [[ "$AUTO_YES" == true ]]; then
+    if [ "$AUTO_YES" = true ]; then
         case "$default" in
             [Yy]*) echo "Y" ;;
             *) echo "N" ;;
@@ -122,7 +122,8 @@ ask() {
     fi
 
     while true; do
-        read -r -p "$prompt $display_default " response
+        printf "%s %s " "$prompt" "$display_default"
+        IFS= read -r response || exit 1
 
         case "$response" in
             [yY]|[yY][eE][sS])
