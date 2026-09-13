@@ -55,8 +55,6 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Create the unprivileged account/group that InspIRCd
-# expects at configure time.
 RUN groupadd --system inspircd \
     && useradd \
     --system \
@@ -67,16 +65,11 @@ RUN groupadd --system inspircd \
 
 WORKDIR /build
 
-# Copy the complete local InspIRCd source tree.
-COPY inspircd/ /build/inspircd/
+# The actual InspIRCd 4.9.0 source tree
+COPY inspircd/inspircd-4.9.0/ /build/inspircd/
 
 WORKDIR /build/inspircd
 
-# Configure, compile and install InspIRCd.
-#
-# --prefix controls where the compiled installation goes.
-# --uid / --gid tell InspIRCd which unprivileged account/group
-# it should use at runtime.
 RUN ./configure \
     --prefix=/opt/inspircd \
     --uid=inspircd \
@@ -99,7 +92,6 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Create runtime user/group.
 RUN groupadd --system inspircd \
     && useradd \
     --system \
@@ -108,10 +100,8 @@ RUN groupadd --system inspircd \
     --shell /usr/sbin/nologin \
     inspircd
 
-# Copy the compiled InspIRCd installation.
 COPY --from=inspircd-build /opt/inspircd/ /opt/inspircd/
 
-# Runtime directories.
 RUN mkdir -p \
     /opt/inspircd/run \
     /opt/inspircd/data \
