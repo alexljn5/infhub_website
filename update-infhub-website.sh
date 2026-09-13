@@ -325,22 +325,18 @@ step "Waiting for services..."
 
 sleep 3
 
-services=(
-    "db"
-    "inspircd"
-    "lounge"
-    "php-app"
-)
+services="db inspircd lounge php-app"
 
 failed=false
 
-for service in "${services[@]}"; do
+for service in $services; do
 
     info "Checking $service..."
 
     healthy=false
+    i=1
 
-    for ((i=1; i<=60; i++)); do
+    while [ "$i" -le 60 ]; do
 
         container_id="$(
             docker compose \
@@ -348,8 +344,9 @@ for service in "${services[@]}"; do
                 ps -q "$service" 2>/dev/null || true
         )"
 
-        if [[ -z "$container_id" ]]; then
+        if [ -z "$container_id" ]; then
             sleep 2
+            i=$((i + 1))
             continue
         fi
 
@@ -360,14 +357,15 @@ for service in "${services[@]}"; do
                 2>/dev/null || true
         )"
 
-        if [[ "$status" != "running" ]]; then
-            if [[ "$status" == "exited" || "$status" == "dead" ]]; then
+        if [ "$status" != "running" ]; then
+            if [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
                 warn "$service is not running (status: $status)"
                 failed=true
                 break
             fi
 
             sleep 2
+            i=$((i + 1))
             continue
         fi
 
@@ -399,11 +397,14 @@ for service in "${services[@]}"; do
 
             starting|unknown)
                 sleep 2
+                i=$((i + 1))
                 ;;
         esac
+
+        i=$((i + 1))
     done
 
-    if [[ "$healthy" != true && "$failed" != true ]]; then
+    if [ "$healthy" != true ] && [ "$failed" != true ]; then
         warn "$service did not become ready within 120 seconds"
         failed=true
     fi
@@ -421,7 +422,7 @@ docker compose \
 
 echo
 
-if [[ "$failed" == true ]]; then
+if [ "$failed" = true ]; then
 
     warn "One or more services failed health verification."
     echo
