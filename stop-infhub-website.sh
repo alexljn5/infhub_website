@@ -12,9 +12,9 @@
 # TheLounge data survive container recreation.
 #
 # Usage:
-#   ./stop-infhub-website.sh            # Interactive stop
-#   ./stop-infhub-website.sh --force    # Stop without confirmation
-#   ./stop-infhub-website.sh --help     # Show help
+#   bash stop-infhub-website.sh            # Interactive stop
+#   bash stop-infhub-website.sh --force    # Stop without confirmation
+#   bash stop-infhub-website.sh --help     # Show help
 # ============================================================
 
 set -euo pipefail
@@ -33,7 +33,7 @@ for arg in "$@"; do
         --force)       FORCE=true ;;
         -h|--help)
             cat <<EOF
-Usage: ./stop-infhub-website.sh [--force] [--help]
+Usage: bash stop-infhub-website.sh [--force] [--help]
 
   Stop the complete INFHUB stack (website, database, InspIRCd, TheLounge).
   Data volumes are preserved.
@@ -43,8 +43,8 @@ Usage: ./stop-infhub-website.sh [--force] [--help]
     -h, --help     Show this help message
 
   Examples:
-    ./stop-infhub-website.sh            # Interactive stop
-    ./stop-infhub-website.sh --force    # Quick non-interactive stop
+    bash stop-infhub-website.sh            # Interactive stop
+    bash stop-infhub-website.sh --force    # Quick non-interactive stop
 EOF
             exit 0
             ;;
@@ -126,7 +126,7 @@ echo "    InspIRCd config:   /home/alexljn5/INFHUB/inf_irc/inspircd/run"
 echo ""
 info "Backups are in: $BACKUP_DIR"
 echo ""
-info "To start again: ./start-infhub-website.sh"
+info "To start again: bash start-infhub-website.sh"
 info "To remove all data: docker compose -f $COMPOSE_FILE down -v"
 echo ""
 ok "Done."

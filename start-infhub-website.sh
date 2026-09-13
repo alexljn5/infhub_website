@@ -9,9 +9,9 @@
 #   - lounge: The Lounge IRC web client (port 9000)
 #
 # Usage:
-#   ./start-infhub-website.sh          # Interactive startup
-#   ./start-infhub-website.sh --yes    # Non-interactive
-#   ./start-infhub-website.sh --help   # Show help
+#   bash start-infhub-website.sh          # Interactive startup
+#   bash start-infhub-website.sh --yes    # Non-interactive
+#   bash start-infhub-website.sh --help   # Show help
 #
 # Notes:
 #   - Stops any existing screen-based TheLounge before starting
@@ -50,7 +50,7 @@ for arg in "$@"; do
         --yes)         AUTO_YES=true ;;
         -h|--help)
             cat <<EOF
-Usage: ./start-infhub-website.sh [--no-build] [--yes] [--help]
+Usage: bash start-infhub-website.sh [--no-build] [--yes] [--help]
 
   Start the complete INFHUB stack (website, database, InspIRCd, TheLounge).
 
@@ -60,9 +60,9 @@ Usage: ./start-infhub-website.sh [--no-build] [--yes] [--help]
     -h, --help     Show this help message
 
   Examples:
-    ./start-infhub-website.sh              # Interactive startup
-    ./start-infhub-website.sh --yes        # Quick non-interactive startup
-    ./start-infhub-website.sh --no-build   # Start without rebuilding
+    bash start-infhub-website.sh              # Interactive startup
+    bash start-infhub-website.sh --yes        # Quick non-interactive startup
+    bash start-infhub-website.sh --no-build   # Start without rebuilding
 EOF
             exit 0
             ;;
@@ -442,8 +442,8 @@ echo "    docker compose -f $COMPOSE_FILE logs -f             — View all logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"
 echo "    docker compose -f $COMPOSE_FILE restart             — Restart all services"
-echo "    ./stop-infhub-website.sh                          — Stop all services"
-echo "    ./update-infhub-website.sh                        — Pull updates and rebuild"
+echo "    bash stop-infhub-website.sh                          — Stop all services"
+echo "    bash update-infhub-website.sh                        — Pull updates and rebuild"
 echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
 echo "                                                       — Access database"
 echo ""

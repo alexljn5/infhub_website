@@ -12,9 +12,9 @@
 #   - lounge
 #
 # Usage:
-#   bash update-infhub-website.sh
-#   bash update-infhub-website.sh --yes
-#   bash update-infhub-website.sh --help
+#   sh update-infhub-website.sh
+#   sh update-infhub-website.sh --yes
+#   sh update-infhub-website.sh --help
 #
 # Safety:
 #   - Never removes Docker volumes
