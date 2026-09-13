@@ -3,26 +3,6 @@
 # ============================================================
 # INFHUB Homelab — Update Script
 # ============================================================
-# Updates the complete INFHUB Docker Compose stack.
-#
-# Managed services:
-#   - php-app
-#   - db
-#   - inspircd
-#   - lounge
-#
-# Usage:
-#   sh update-infhub-website.sh
-#   sh update-infhub-website.sh --yes
-#   sh update-infhub-website.sh --help
-#
-# Safety:
-#   - Never removes Docker volumes
-#   - Never runs "docker compose down -v"
-#   - Never deletes IRC configuration
-#   - Never deletes The Lounge data
-#   - Database backup is optional
-# ============================================================
 
 set -eu
 
@@ -55,8 +35,6 @@ Usage: $0 [OPTIONS]
 
 Update the complete INFHUB Docker Compose stack.
 
-Prompts accept Y/yes or N/no. Press Enter to use the displayed default.
-
 Options:
   --yes       Non-interactive mode
   -h, --help  Show this help
@@ -88,61 +66,78 @@ done
 # ------------------------------------------------------------
 
 step() {
-    echo
-    echo -e "\033[1;36m[$(date '+%H:%M:%S')] $1\033[0m"
+    printf '\n\033[1;36m[%s] %s\033[0m\n' "$(date '+%H:%M:%S')" "$1"
 }
 
 ok() {
-    echo -e "  \033[1;32m[OK]\033[0m $1"
+    printf '  \033[1;32m[OK]\033[0m %s\n' "$1"
 }
 
 warn() {
-    echo -e "  \033[1;33m[WARN]\033[0m $1"
+    printf '  \033[1;33m[WARN]\033[0m %s\n' "$1"
 }
 
 err() {
-    echo -e "  \033[1;31m[ERR]\033[0m $1"
+    printf '  \033[1;31m[ERR]\033[0m %s\n' "$1"
 }
 
 info() {
-    echo -e "  \033[1;37m[INFO]\033[0m $1"
+    printf '  \033[1;37m[INFO]\033[0m %s\n' "$1"
 }
+
+# ------------------------------------------------------------
+# Prompt helper
+#
+# IMPORTANT:
+# Prompt goes to stderr because the function's stdout is captured
+# by response=$(ask ...). Only Y/N is allowed onto stdout.
+# ------------------------------------------------------------
 
 ask() {
     prompt="$1"
     default="${2:-Y}"
-    display_default="[Y/N] (default: $default)"
+
+    if [ "$default" = "Y" ]; then
+        display_default="[Y/n] (default: Y)"
+    else
+        display_default="[y/N] (default: N)"
+    fi
 
     if [ "$AUTO_YES" = true ]; then
-        case "$default" in
-            [Yy]*) echo "Y" ;;
-            *) echo "N" ;;
-        esac
-        return
+        if [ "$default" = "Y" ]; then
+            printf '%s\n' "Y"
+        else
+            printf '%s\n' "N"
+        fi
+        return 0
     fi
 
     while true; do
-        printf "%s %s " "$prompt" "$display_default"
-        IFS= read -r response || exit 1
+        printf '%s %s ' "$prompt" "$display_default" >&2
+
+        if ! IFS= read -r response; then
+            printf '\n' >&2
+            exit 1
+        fi
 
         case "$response" in
-            [yY]|[yY][eE][sS])
-                echo "Y"
-                return
+            y|Y|yes|YES|Yes)
+                printf '%s\n' "Y"
+                return 0
                 ;;
-            [nN]|[nN][oO])
-                echo "N"
-                return
+
+            n|N|no|NO|No)
+                printf '%s\n' "N"
+                return 0
                 ;;
+
             "")
-                case "$default" in
-                    [Yy]*) echo "Y" ;;
-                    *) echo "N" ;;
-                esac
-                return
+                printf '%s\n' "$default"
+                return 0
                 ;;
+
             *)
-                echo "Please answer Y or N." >&2
+                printf '%s\n' "Please answer Y or N." >&2
                 ;;
         esac
     done
@@ -174,7 +169,9 @@ ok "Docker available"
 ok "Docker Compose available"
 ok "Compose file found"
 
-# Validate Compose before doing anything destructive-ish.
+# ------------------------------------------------------------
+# Validate Compose
+# ------------------------------------------------------------
 
 step "Validating Docker Compose configuration..."
 
@@ -193,38 +190,72 @@ step "Database backup"
 
 response=$(ask "  Create a database backup before updating?" "Y")
 
-case "$response" in
-    [nN]*)
-        info "Skipping database backup"
-        ;;
-    *)
-        mkdir -p "$BACKUP_DIR"
+if [ "$response" = "N" ]; then
 
-        backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
-        db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
+    info "Skipping database backup"
 
-        if [ ! -f "$ENV_FILE" ]; then
-            warn ".env not found; cannot automatically determine DB root password."
+else
+
+    mkdir -p "$BACKUP_DIR"
+
+    backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
+    db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
+
+    if [ ! -f "$ENV_FILE" ]; then
+
+        warn ".env not found; cannot determine DB root password."
+        info "Skipping database backup."
+
+    else
+
+        DB_ROOT_PASS="$(
+            grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" \
+                | head -n1 \
+                | cut -d'=' -f2-
+        )"
+
+        if [ -z "$DB_ROOT_PASS" ]; then
+
+            warn "DB_ROOT_PASSWORD is not defined in .env."
             info "Skipping database backup."
+
         else
-            DB_ROOT_PASS="$(
-                grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" \
-                    | head -n1 \
-                    | cut -d'=' -f2-
+
+            # Check whether the db service currently has a running
+            # container.
+            DB_CONTAINER="$(
+                docker compose \
+                    -f "$COMPOSE_FILE" \
+                    ps -q db 2>/dev/null || true
             )"
 
-            if [ -z "$DB_ROOT_PASS" ]; then
-                warn "DB_ROOT_PASSWORD is not defined in .env."
+            if [ -z "$DB_CONTAINER" ]; then
+
+                warn "MariaDB container does not currently exist."
                 info "Skipping database backup."
+
             else
 
-                # Make sure the DB service exists/runs.
-                if docker compose -f "$COMPOSE_FILE" ps --status running db \
-                    --format '{{.Name}}' | grep -q .; then
+                DB_STATUS="$(
+                    docker inspect \
+                        --format '{{.State.Status}}' \
+                        "$DB_CONTAINER" \
+                        2>/dev/null || true
+                )"
+
+                if [ "$DB_STATUS" != "running" ]; then
+
+                    warn "MariaDB container is not running."
+                    info "Skipping database backup."
+
+                else
 
                     info "Creating MariaDB backup..."
+                    info "Output: $db_backup"
 
-                    if docker compose -f "$COMPOSE_FILE" exec -T \
+                    if docker compose \
+                        -f "$COMPOSE_FILE" \
+                        exec -T \
                         -e MYSQL_PWD="$DB_ROOT_PASS" \
                         db \
                         mariadb-dump \
@@ -233,7 +264,7 @@ case "$response" in
                         > "$db_backup"; then
 
                         if [ -s "$db_backup" ]; then
-                            ok "Database backed up:"
+                            ok "Database backup created"
                             echo "    $db_backup"
                         else
                             warn "Backup file is empty."
@@ -241,18 +272,16 @@ case "$response" in
                         fi
 
                     else
-                        warn "Database backup failed."
-                        rm -f "$db_backup"
-                    fi
 
-                else
-                    warn "MariaDB container is not currently running."
-                    info "Skipping database backup."
+                        warn "Database backup command failed."
+                        rm -f "$db_backup"
+
+                    fi
                 fi
             fi
         fi
-        ;;
-esac
+    fi
+fi
 
 # ------------------------------------------------------------
 # Pull images
@@ -262,18 +291,19 @@ step "Pulling latest Docker images..."
 
 response=$(ask "  Pull latest images (docker compose pull)?" "Y")
 
-case "$response" in
-    [nN]*)
-        info "Skipping image pull"
-        ;;
-    *)
-        docker compose \
-            -f "$COMPOSE_FILE" \
-            pull
+if [ "$response" = "N" ]; then
 
-        ok "Docker images pulled"
-        ;;
-esac
+    info "Skipping image pull"
+
+else
+
+    docker compose \
+        -f "$COMPOSE_FILE" \
+        pull
+
+    ok "Docker images pulled"
+
+fi
 
 # ------------------------------------------------------------
 # Rebuild and restart
@@ -286,34 +316,36 @@ response=$(ask \
     "Y"
 )
 
-case "$response" in
-    [nN]*)
-        response=$(ask \
-            "  Restart without rebuilding (docker compose up -d)?" \
-            "Y"
-        )
+if [ "$response" = "N" ]; then
 
-        case "$response" in
-            [nN]*)
-                info "Skipping restart"
-                ;;
-            *)
-                docker compose \
-                    -f "$COMPOSE_FILE" \
-                    up -d
+    response=$(ask \
+        "  Restart without rebuilding (docker compose up -d)?" \
+        "Y"
+    )
 
-                ok "Stack started"
-                ;;
-        esac
-        ;;
-    *)
+    if [ "$response" = "N" ]; then
+
+        info "Skipping restart"
+
+    else
+
         docker compose \
             -f "$COMPOSE_FILE" \
-            up -d --build
+            up -d
 
-        ok "Stack rebuilt and started"
-        ;;
-esac
+        ok "Stack started"
+
+    fi
+
+else
+
+    docker compose \
+        -f "$COMPOSE_FILE" \
+        up -d --build
+
+    ok "Stack rebuilt and started"
+
+fi
 
 # ------------------------------------------------------------
 # Wait for services
@@ -321,12 +353,9 @@ esac
 
 step "Waiting for services..."
 
-# Give Compose a moment to create/start containers.
-
 sleep 3
 
 services="db inspircd lounge php-app"
-
 failed=false
 
 for service in $services; do
@@ -357,13 +386,13 @@ for service in $services; do
                 2>/dev/null || true
         )"
 
-        if [ "$status" != "running" ]; then
-            if [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
-                warn "$service is not running (status: $status)"
-                failed=true
-                break
-            fi
+        if [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
+            warn "$service is not running (status: $status)"
+            failed=true
+            break
+        fi
 
+        if [ "$status" != "running" ]; then
             sleep 2
             i=$((i + 1))
             continue
@@ -377,6 +406,7 @@ for service in $services; do
         )"
 
         case "$health" in
+
             healthy)
                 ok "$service healthy"
                 healthy=true
@@ -399,15 +429,20 @@ for service in $services; do
                 sleep 2
                 i=$((i + 1))
                 ;;
+
+            *)
+                sleep 2
+                i=$((i + 1))
+                ;;
         esac
 
-        i=$((i + 1))
     done
 
     if [ "$healthy" != true ] && [ "$failed" != true ]; then
         warn "$service did not become ready within 120 seconds"
         failed=true
     fi
+
 done
 
 # ------------------------------------------------------------
@@ -425,6 +460,7 @@ echo
 if [ "$failed" = true ]; then
 
     warn "One or more services failed health verification."
+
     echo
     echo "Useful diagnostics:"
     echo "  docker compose -f \"$COMPOSE_FILE\" ps"
@@ -438,7 +474,7 @@ fi
 ok "All services passed verification"
 
 # ------------------------------------------------------------
-# Service information
+# Complete
 # ------------------------------------------------------------
 
 step "=== Update Complete ==="
