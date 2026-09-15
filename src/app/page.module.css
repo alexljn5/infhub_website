@@ -62,13 +62,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 3px solid var(--color-accent);
-    border-radius: var(--radius-xl);
+    border: 2px solid var(--color-accent);
+    border-radius: 4px;
     padding: var(--space-lg);
     margin: var(--space-lg) auto;
     max-width: 100%;
     background: var(--color-bg-secondary);
-    box-shadow: 0 0 12px rgba(255, 34, 34, 0.25);
+    box-shadow: 0 0 0 1px rgba(255, 34, 34, 0.15), 0 0 6px rgba(255, 34, 34, 0.15);
 }
 
 .logoAscii {
@@ -222,7 +222,7 @@
 
     .asciiRow {
         gap: var(--space-sm);
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
 
     .bunnyAsciiLeft,
