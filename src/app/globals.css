@@ -1,42 +1,53 @@
 /* ============================================================
    INFHUB Global Styles
    ============================================================
-   Design tokens, CSS resets, and global utility classes.
+   Design tokens, CSS resets, @font-face declarations, and
+   global utility classes.
+   Theme: gothic black/red
    All module/component styles should be scoped via CSS Modules
    or co-located in their feature directory.
    ============================================================ */
 
+/* ---------- Pixel Font ---------- */
+@font-face {
+    font-family: 'FS Pixel Sans Unicode';
+    src: url('../fonts/fs-pixel-sans-unicode-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------- Design Tokens ---------- */
 :root {
-    /* Colors */
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #1a1a1a;
-    --color-bg-tertiary: #333333;
+    /* Colors — gothic black/red */
+    --color-bg-primary: #0a0a0a;
+    --color-bg-secondary: #141414;
+    --color-bg-tertiary: #1e1e1e;
     --color-text-primary: #ffffff;
     --color-text-secondary: #cccccc;
-    --color-accent-green: #00FF00;
-    --color-accent-green-dim: #457c46;
-    --color-accent-red: #FF0000;
-    --color-accent-red-dim: #960a0a;
-    --color-accent-red-light: #FF6666;
-    --color-accent-red-pale: #FFCCCC;
-    --color-border-subtle: rgba(255, 255, 255, 0.15);
+    --color-accent: #ff2222;
+    --color-accent-dim: #990000;
+    --color-accent-light: #ff6666;
+    --color-border-subtle: rgba(255, 255, 255, 0.12);
 
-    /* Spacing */
-    --space-xs: 4px;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --space-xl: 32px;
-    --space-2xl: 40px;
+    /* Spacing — responsive via clamp() */
+    --space-xs: clamp(2px, 0.5vw, 4px);
+    --space-sm: clamp(4px, 1vw, 8px);
+    --space-md: clamp(8px, 2vw, 16px);
+    --space-lg: clamp(12px, 3vw, 24px);
+    --space-xl: clamp(16px, 4vw, 32px);
+    --space-2xl: clamp(24px, 6vw, 48px);
 
     /* Typography */
     --font-family-base: Arial, sans-serif;
+    --font-family-pixel: 'FS Pixel Sans Unicode', monospace;
     --font-family-mono: monospace;
-    --font-size-xs: 8px;
-    --font-size-sm: 12px;
-    --font-size-base: 14px;
-    --font-size-md: 16px;
-    --font-size-lg: 20px;
+    --font-size-xs: clamp(8px, 1.5vw, 12px);
+    --font-size-sm: clamp(10px, 2vw, 14px);
+    --font-size-base: clamp(12px, 2.5vw, 16px);
+    --font-size-md: clamp(14px, 3vw, 20px);
+    --font-size-lg: clamp(18px, 4vw, 28px);
+    --font-size-xl: clamp(24px, 5vw, 40px);
 
     /* Borders & Radius */
     --radius-sm: 4px;
@@ -49,17 +60,18 @@
     --transition-base: 0.3s ease;
 
     /* Shadows */
-    --shadow-green: 0 0 20px rgba(0, 255, 0, 0.5);
-    --shadow-red: 0 0 20px rgba(255, 0, 0, 0.3);
-    --shadow-red-strong: 0 0 20px rgba(255, 0, 0, 0.5);
+    --shadow-accent: 0 0 20px rgba(255, 34, 34, 0.4);
+    --shadow-accent-strong: 0 0 20px rgba(255, 34, 34, 0.6);
     --shadow-dropdown: 0 8px 20px rgba(0, 0, 0, 0.6);
 
     /* Layout */
-    --header-height: 60px;
-    --footer-height: 40px;
+    --header-height: clamp(48px, 8vh, 64px);
+    --footer-height: clamp(36px, 6vh, 48px);
+    --content-max-width: 1200px;
+    --content-padding: clamp(12px, 3vw, 32px);
 }
 
-/* Reset */
+/* ---------- Reset ---------- */
 *,
 *::before,
 *::after {
@@ -68,18 +80,23 @@
     padding: 0;
 }
 
-html,
+html {
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family: var(--font-family-base);
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     min-height: 100vh;
+    line-height: 1.5;
 }
 
 body {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
 }
 
 a {
@@ -95,6 +112,14 @@ button {
 img {
     max-width: 100%;
     height: auto;
+}
+
+/* ---------- Layout Container ---------- */
+.container {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 0 var(--content-padding);
 }
 
 /* Utility Classes */

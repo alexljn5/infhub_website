@@ -92,6 +92,51 @@ ask() {
     fi
 }
 
+wait_for_service() {
+    local service="$1"
+    local label="$2"
+    local container_id=""
+    local status=""
+    local health=""
+    local elapsed=0
+
+    for ((i=0; i<MAX_RETRIES; i++)); do
+        sleep "$RETRY_INTERVAL"
+        elapsed=$((elapsed + RETRY_INTERVAL))
+        container_id="$(docker compose -f "$COMPOSE_FILE" ps -q "$service" 2>/dev/null || true)"
+
+        if [[ -z "$container_id" ]]; then
+            echo -n "  $label... waiting ($elapsed seconds)..."
+            continue
+        fi
+
+        status="$(docker inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
+        if [[ "$status" != "running" ]]; then
+            err "$label container is not running (status: ${status:-unknown})"
+            echo "  Check logs: docker compose -f $COMPOSE_FILE logs $service"
+            return 1
+        fi
+
+        health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null || true)"
+        if [[ "$health" == "healthy" || "$health" == "none" ]]; then
+            ok "$label healthy after $elapsed seconds"
+            return 0
+        fi
+
+        if [[ "$health" == "unhealthy" ]]; then
+            err "$label container reports unhealthy"
+            echo "  Check logs: docker compose -f $COMPOSE_FILE logs $service"
+            return 1
+        fi
+
+        echo -n "  $label... waiting ($elapsed seconds)..."
+    done
+
+    err "$label did not become healthy within $((MAX_RETRIES * RETRY_INTERVAL)) seconds"
+    echo "  Check logs: docker compose -f $COMPOSE_FILE logs $service"
+    return 1
+}
+
 # --- Step 1: Pre-flight Checks ---
 step "=== INFHUB Homelab Startup ==="
 echo "Stack directory: $SCRIPT_DIR"
@@ -266,116 +311,14 @@ ok "Stack build and start command issued"
 # --- Step 7: Wait for Services Health ---
 step "Waiting for services to become healthy..."
 
-# Wait for DB
-db_healthy=false
-elapsed=0
-for ((i=0; i<MAX_RETRIES; i++)); do
-    sleep "$RETRY_INTERVAL"
-    elapsed=$((elapsed + RETRY_INTERVAL))
-    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-db-1 2>/dev/null || echo "")
-    if [[ "$health" == "healthy" ]]; then
-        db_healthy=true
-        break
-    fi
-    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-db-1 2>/dev/null || echo "")
-    if [[ "$container_status" != "running" ]]; then
-        err "Database container is not running (status: $container_status)"
-        echo "  Check logs: docker compose -f $COMPOSE_FILE logs db"
-        exit 1
-    fi
-    echo -n "  DB... waiting ($elapsed seconds)..."
-done
-echo ""
-if [[ "$db_healthy" == true ]]; then
-    ok "Database healthy after $elapsed seconds"
-else
-    err "Database did not become healthy within $MAX_RETRIES seconds"
-    exit 1
-fi
-
-# Wait for InspIRCd
-inspircd_healthy=false
-elapsed=0
-for ((i=0; i<MAX_RETRIES; i++)); do
-    sleep "$RETRY_INTERVAL"
-    elapsed=$((elapsed + RETRY_INTERVAL))
-    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-inspircd-1 2>/dev/null || echo "")
-    if [[ "$health" == "healthy" ]]; then
-        inspircd_healthy=true
-        break
-    fi
-    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-inspircd-1 2>/dev/null || echo "")
-    if [[ "$container_status" != "running" ]]; then
-        err "InspIRCd container is not running (status: $container_status)"
-        echo "  Check logs: docker compose -f $COMPOSE_FILE logs inspircd"
-        exit 1
-    fi
-    echo -n "  InspIRCd... waiting ($elapsed seconds)..."
-done
-echo ""
-if [[ "$inspircd_healthy" == true ]]; then
-    ok "InspIRCd healthy after $elapsed seconds"
-else
-    err "InspIRCd did not become healthy within $MAX_RETRIES seconds"
-    echo "  Check logs: docker compose -f $COMPOSE_FILE logs inspircd"
-    exit 1
-fi
-
-# Wait for Lounge
-lounge_healthy=false
-elapsed=0
-for ((i=0; i<MAX_RETRIES; i++)); do
-    sleep "$RETRY_INTERVAL"
-    elapsed=$((elapsed + RETRY_INTERVAL))
-    health=$(docker inspect --format='{{.State.Health.Status}}' infhub_lounge 2>/dev/null || echo "")
-    if [[ "$health" == "healthy" ]]; then
-        lounge_healthy=true
-        break
-    fi
-    container_status=$(docker inspect --format='{{.State.Status}}' infhub_lounge 2>/dev/null || echo "")
-    if [[ "$container_status" != "running" ]]; then
-        err "Lounge container is not running (status: $container_status)"
-        echo "  Check logs: docker compose -f $COMPOSE_FILE logs lounge"
-        exit 1
-    fi
-    echo -n "  Lounge... waiting ($elapsed seconds)..."
-done
-echo ""
-if [[ "$lounge_healthy" == true ]]; then
-    ok "Lounge healthy after $elapsed seconds"
-else
-    warn "Lounge did not become healthy within $MAX_RETRIES seconds — check logs"
-fi
-
-# Wait for Next.js web app
-web_healthy=false
-elapsed=0
-for ((i=0; i<MAX_RETRIES; i++)); do
-    sleep "$RETRY_INTERVAL"
-    elapsed=$((elapsed + RETRY_INTERVAL))
-    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website 2>/dev/null || echo "")
-    if [[ "$health" == "healthy" ]]; then
-        web_healthy=true
-        break
-    fi
-    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website 2>/dev/null || echo "")
-    if [[ "$container_status" != "running" ]]; then
-        err "Next.js web container is not running (status: $container_status)"
-        echo "  Check logs: docker compose -f $COMPOSE_FILE logs web"
-        exit 1
-    fi
-    echo -n "  Web app... waiting ($elapsed seconds)..."
-done
-echo ""
-if [[ "$web_healthy" == true ]]; then
-    ok "Web app healthy after $elapsed seconds"
-else
-    warn "Web app did not become healthy within $MAX_RETRIES seconds — check logs"
-fi
+wait_for_service "db" "Database" || exit 1
+wait_for_service "inspircd" "InspIRCd" || exit 1
+wait_for_service "lounge" "Lounge" || warn "Lounge health check failed; check its logs"
+wait_for_service "web" "Web app" || warn "Web health check failed; check its logs"
 
 # --- Step 8: Verify TheLounge can reach InspIRCd ---
 step "Verifying TheLounge can reach InspIRCd..."
-irc_port_check=$(docker exec infhub_lounge nc -z inspircd 6667 2>&1 && echo "ok" || echo "fail")
+irc_port_check=$(docker compose -f "$COMPOSE_FILE" exec -T lounge nc -z inspircd 6667 2>&1 && echo "ok" || echo "fail")
 if [[ "$irc_port_check" == "ok" ]]; then
     ok "TheLounge can reach InspIRCd on port 6667"
 else
@@ -402,11 +345,16 @@ echo "  For production (with reverse proxy):"
 echo "    Web Application    http://infhub.org"
 echo "    The Lounge IRC     http://irc.infhub.org"
 echo ""
+web_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' web 2>/dev/null || true)"
+db_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' db 2>/dev/null || true)"
+inspircd_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' inspircd 2>/dev/null || true)"
+lounge_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' lounge 2>/dev/null || true)"
+
 echo "  Managed services:"
-echo "    Website/Next.js:   infhub-website"
-echo "    Database:          infhub-website-db-1 (internal)"
-echo "    InspIRCd:          infhub-website-inspircd-1"
-echo "    TheLounge:         infhub_lounge"
+echo "    Website/Next.js:   ${web_name:-web}"
+echo "    Database:          ${db_name:-db} (internal)"
+echo "    InspIRCd:          ${inspircd_name:-inspircd}"
+echo "    TheLounge:         ${lounge_name:-lounge}"
 echo ""
 echo "  Persistent data:"
 echo "    Database:          db-data volume"

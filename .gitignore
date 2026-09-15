@@ -7,3 +7,4 @@ DEPLOY.md
 /.next
 /node_modules
 .next-test.log
+tsconfig.tsbuildinfo

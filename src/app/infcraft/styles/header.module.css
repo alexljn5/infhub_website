@@ -10,4 +10,5 @@
 
 .header h1 {
     margin: 0;
+    font-family: var(--font-family-pixel);
 }

@@ -55,6 +55,8 @@ COPY src/app ./src/app
 COPY src/lib ./src/lib
 COPY src/types ./src/types
 COPY src/img ./src/img
+COPY src/fonts ./src/fonts
+COPY src/globals.js ./src/globals.js
 COPY next.config.js ./next.config.js
 COPY tsconfig.json ./tsconfig.json
 COPY next-env.d.ts ./next-env.d.ts

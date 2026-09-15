@@ -14,14 +14,17 @@ The guiding idea is simple: **a page is a module, and a module owns its markup, 
 4. [Components](#components)
 5. [HTML and JSX](#html-and-jsx)
 6. [CSS Organisation](#css-organisation)
-7. [JavaScript and TypeScript](#javascript-and-typescript)
-8. [API Routes](#api-routes)
-9. [Assets](#assets)
-10. [Naming Conventions](#naming-conventions)
-11. [Environment Variables](#environment-variables)
-12. [Docker and Permissions](#docker-and-permissions)
-13. [Legacy Migration](#legacy-migration)
-14. [Review Checklist](#review-checklist)
+7. [Styling Conventions](#styling-conventions)
+8. [Typography and Fonts](#typography-and-fonts)
+9. [JavaScript and TypeScript](#javascript-and-typescript)
+10. [Shared Runtime Config](#shared-runtime-config)
+11. [API Routes](#api-routes)
+12. [Assets](#assets)
+13. [Naming Conventions](#naming-conventions)
+14. [Environment Variables](#environment-variables)
+15. [Docker and Permissions](#docker-and-permissions)
+16. [Legacy Migration](#legacy-migration)
+17. [Review Checklist](#review-checklist)
 
 ---
 
@@ -38,7 +41,7 @@ project-root/
 │   │   ├── layout.tsx               # Root layout
 │   │   ├── page.tsx                 # Home page
 │   │   ├── page.module.css          # Home page styles
-│   │   ├── globals.css              # Global reset and design tokens
+│   │   ├── globals.css              # Global reset, design tokens, @font-face
 │   │   ├── api/                     # Route handlers
 │   │   │   ├── auth/
 │   │   │   │   ├── irc-auth/route.ts
@@ -70,6 +73,9 @@ project-root/
 │   │   └── rateLimit.ts
 │   ├── types/                       # Shared TypeScript types
 │   │   └── index.ts
+│   ├── globals.js                   # Shared runtime flags (version, font, etc.)
+│   ├── fonts/                       # Font assets
+│   │   └── fs-pixel-sans-unicode-regular.ttf
 │   ├── database/
 │   │   └── schema.sql
 │   ├── img/                         # All static assets
@@ -98,6 +104,8 @@ project-root/
 - `src/app/` contains routes, layouts, pages, and page-owned components.
 - `src/lib/` contains shared server-side utilities such as database, authentication, and rate-limiting code.
 - `src/types/` contains shared TypeScript interfaces and response types.
+- `src/globals.js` contains shared runtime flags (version number, font family names, etc.) used across the application.
+- `src/fonts/` contains font files referenced by `@font-face` in `src/app/globals.css`.
 - `src/img/` is the only asset directory used by the active application.
 - `src/legacy/` is archival code. It is not imported by new code and is not an application entry point.
 - Shared components that are used by more than one feature live in `src/app/components/`.
@@ -178,8 +186,9 @@ The home page follows the same pattern with `page.tsx` and `page.module.css` co-
 4. Keep feature-specific hooks in `hooks/`.
 5. Keep feature-specific server utilities in `lib/`.
 6. Import shared utilities from `src/lib/` and shared types from `src/types/`.
-7. Do not reach into another feature's internal files. Use a shared component or a small public API instead.
-8. Do not place unrelated global classes or scripts in a page module.
+7. Import shared runtime flags from `src/globals.js`.
+8. Do not reach into another feature's internal files. Use a shared component or a small public API instead.
+9. Do not place unrelated global classes or scripts in a page module.
 
 ---
 
@@ -264,7 +273,7 @@ export default async function HomePage() {
 
 | Layer | Location | Responsibility |
 |---|---|---|
-| Global | `src/app/globals.css` | Reset, design tokens, typography, body-level layout |
+| Global | `src/app/globals.css` | Reset, design tokens, @font-face, typography, body-level layout |
 | Feature | `src/app/[feature]/styles/` | Feature and page composition styles |
 | Component | `Component.module.css` | Styles owned by one component |
 
@@ -274,15 +283,41 @@ Define reusable values in `globals.css`:
 
 ```css
 :root {
-    --color-bg-primary: #000000;
-    --color-bg-secondary: #1a1a1a;
+    /* Colors — gothic black/red */
+    --color-bg-primary: #0a0a0a;
+    --color-bg-secondary: #141414;
+    --color-bg-tertiary: #1e1e1e;
     --color-text-primary: #ffffff;
-    --color-accent-green: #00ff00;
-    --space-sm: 8px;
-    --space-md: 16px;
-    --space-lg: 24px;
-    --radius-md: 8px;
+    --color-text-secondary: #cccccc;
+    --color-accent: #ff2222;
+    --color-accent-dim: #990000;
+    --color-accent-light: #ff6666;
+    --color-border-subtle: rgba(255, 255, 255, 0.12);
+
+    /* Spacing — responsive via clamp() */
+    --space-xs: clamp(2px, 0.5vw, 4px);
+    --space-sm: clamp(4px, 1vw, 8px);
+    --space-md: clamp(8px, 2vw, 16px);
+    --space-lg: clamp(12px, 3vw, 24px);
+    --space-xl: clamp(16px, 4vw, 32px);
+    --space-2xl: clamp(24px, 6vw, 48px);
+
+    /* Typography */
+    --font-family-base: Arial, sans-serif;
+    --font-family-pixel: 'FS Pixel Sans Unicode', monospace;
     --font-family-mono: monospace;
+    --font-size-xs: clamp(8px, 1.5vw, 12px);
+    --font-size-sm: clamp(10px, 2vw, 14px);
+    --font-size-base: clamp(12px, 2.5vw, 16px);
+    --font-size-md: clamp(14px, 3vw, 20px);
+    --font-size-lg: clamp(18px, 4vw, 28px);
+    --font-size-xl: clamp(24px, 5vw, 40px);
+
+    /* Layout */
+    --header-height: clamp(48px, 8vh, 64px);
+    --footer-height: clamp(36px, 6vh, 48px);
+    --content-max-width: 1200px;
+    --content-padding: clamp(12px, 3vw, 32px);
 }
 ```
 
@@ -292,10 +327,53 @@ Define reusable values in `globals.css`:
 - Use lowercase module filenames when they live in a feature `styles/` directory.
 - Use descriptive class names that reflect purpose, not visual implementation.
 - Use custom properties for themeable values.
-- Keep responsive rules in the relevant module.
+- Use `clamp()` for responsive sizing of spacing, typography, and layout values.
 - Do not add vendor prefixes manually; let the Next.js CSS pipeline handle them.
 - Do not use global selectors from a module to style unrelated pages.
 - Do not keep active CSS under `src/legacy/css/`.
+
+### Responsive breakpoints
+
+| Breakpoint | Behaviour |
+|---|---|
+| `> 900px` | Full layout, multi-column where applicable |
+| `<= 900px` | Single column, reduced spacing and font sizes |
+| `<= 600px` | Compact layout, stacked elements, smaller fonts |
+
+Add `@media (max-width: ...)` rules inside the relevant CSS Module or feature style file. Prefer breaking inside the module that owns the affected layout rather than in `globals.css`.
+
+---
+
+## Typography and Fonts
+
+### Font loading
+
+Fonts are declared via `@font-face` in `src/app/globals.css` and referenced through CSS custom properties. This keeps font configuration centralised so changing a font requires editing one place.
+
+```css
+@font-face {
+    font-family: 'FS Pixel Sans Unicode';
+    src: url('../fonts/fs-pixel-sans-unicode-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+```
+
+The font family name is also exported from `src/globals.js` for use in JavaScript:
+
+```js
+// src/globals.js
+export const versionNumber = "0.0.1";
+export const fontFamilyPixel = "'FS Pixel Sans Unicode', monospace";
+```
+
+### Font usage
+
+- `--font-family-pixel` is used for headings, ASCII art, and decorative elements.
+- `--font-family-base` is used for body text and UI elements.
+- `--font-family-mono` is used for code blocks and monospace contexts.
+- Do not hardcode font family names in CSS Modules or components. Always use the CSS custom property or import from `src/globals.js`.
 
 ---
 
@@ -317,7 +395,8 @@ Define reusable values in `globals.css`:
 | Feature client hook | Feature `hooks/` | `src/app/infcraft/hooks/useAuth.ts` |
 | Shared server utility | `src/lib/` | `rateLimit.ts` |
 | Feature server utility | Feature `lib/` | `src/app/infcraft/lib/fetchServer.ts` |
-| Shared types | `src/types/` | `ApiResponse.ts` or `index.ts` |
+| Shared type | `src/types/` | `ApiResponse.ts` or `index.ts` |
+| Shared runtime flag | `src/globals.js` | `versionNumber`, `fontFamilyPixel` |
 
 ### TypeScript rules
 
@@ -330,6 +409,27 @@ Define reusable values in `globals.css`:
 - Avoid side effects during module initialisation.
 - Use typed event handlers, for example `React.MouseEvent<HTMLButtonElement>`.
 - Keep browser APIs inside client components or client hooks.
+
+---
+
+## Shared Runtime Config
+
+`src/globals.js` holds application-wide flags that multiple modules need but should not hardcode. This keeps values centralised so a single change propagates everywhere.
+
+### Rules
+
+1. Export constants only — no mutable state, no side effects.
+2. Use descriptive names in `camelCase`.
+3. Font family names are exported as CSS-value strings (including fallbacks) so they can be used directly in both CSS and JS contexts.
+4. Do not put secrets or environment-specific values here. Use environment variables for those.
+5. Do not import `src/globals.js` from server-only code that runs at build time unless the values are static.
+
+### Current flags
+
+| Flag | Type | Purpose |
+|---|---|---|
+| `versionNumber` | `string` | Application version, e.g. `"0.0.1"` |
+| `fontFamilyPixel` | `string` | Pixel font family CSS value, e.g. `"'FS Pixel Sans Unicode', monospace"` |
 
 ---
 
@@ -429,6 +529,10 @@ export function Logo() {
 
 This lets Next.js hash, optimise, and bundle the asset. It also keeps the asset inside the source tree.
 
+### Fonts
+
+Fonts live under `src/fonts/` and are loaded via `@font-face` in `src/app/globals.css`. The font family name is also exported from `src/globals.js` for JavaScript usage. Do not copy fonts to `public/` or reference them with absolute paths.
+
 ### Text and other source assets
 
 For text files that are read by a Server Component, read them from `src/img/` using a typed server-side helper:
@@ -452,7 +556,7 @@ Do not expose raw text files through a manually configured public URL.
 - Use SVG for icons when practical.
 - Do not duplicate an asset in both `src/img/` and `src/legacy/`.
 - Legacy assets remain under `src/legacy/` only as historical references.
-- Ensure `Dockerfile` copies `src/img/` into the Next.js build stage.
+- Ensure `Dockerfile` copies `src/img/` and `src/fonts/` into the Next.js build stage.
 - Do not mount a host source directory over the production image in a way that changes file ownership or bypasses the built asset pipeline.
 
 ---
@@ -468,10 +572,12 @@ Do not expose raw text files through a manually configured public URL.
 | Hook | camelCase, `use*` | `useClickableBoxes.ts` |
 | Utility | camelCase `.ts` | `rateLimit.ts` |
 | Shared type | PascalCase export in `src/types/` | `ApiResponse` |
+| Runtime flag | camelCase in `src/globals.js` | `versionNumber`, `fontFamilyPixel` |
 | Feature directory | lowercase or product name | `infcraft` |
 | Database table | snake_case | `email_verification_tokens` |
 | Environment variable | UPPER_SNAKE_CASE | `DB_HOST` |
 | Asset directory | lowercase | `src/img/logo/` |
+| Font file | lowercase, descriptive | `fs-pixel-sans-unicode-regular.ttf` |
 
 Use kebab-case for route directories and URL segments. Use PascalCase for exported components and types. Do not mix `snake_case`, `kebab-case`, and camelCase within the same kind of file.
 
@@ -519,7 +625,7 @@ NEXT_PUBLIC_URL=http://localhost:8080
 ### Image boundaries
 
 - The Next.js production target is `nextjs-runtime`.
-- The runtime image contains the built application, dependencies, and `src/img/` assets.
+- The runtime image contains the built application, dependencies, `src/img/` assets, and `src/fonts/` assets.
 - The legacy PHP target remains available only for historical reference and is not the active web service.
 - The Compose `web` service must build `nextjs-runtime`, not the intermediate build stage.
 - The `web` service exposes container port `3000`; the host mapping is `8080:3000`.
@@ -640,6 +746,12 @@ Before merging a page or feature:
 - [ ] Styles are scoped to a CSS Module or feature style directory.
 - [ ] No active code references `public/`.
 - [ ] All active assets are under `src/img/`.
+- [ ] Fonts are loaded via `@font-face` in `globals.css`, not hardcoded.
+- [ ] Font family names use CSS custom properties, not literal strings.
+- [ ] Theme tokens use the gothic black/red colour scheme.
+- [ ] Spacing and typography use `clamp()` for responsiveness.
+- [ ] Layout respects `--content-max-width` and `--content-padding`.
+- [ ] Responsive breakpoints are handled in the relevant module.
 - [ ] Legacy code is only referenced for migration context.
 - [ ] API routes are authenticated and rate-limited unless explicitly public.
 - [ ] API errors use the standard JSON shape.

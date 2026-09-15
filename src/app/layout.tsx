@@ -21,7 +21,7 @@ export default function RootLayout({
         <html lang="en">
             <body>
                 <Header />
-                <main style={{ flex: 1, width: '100%' }}>{children}</main>
+                <main>{children}</main>
                 <Footer />
             </body>
         </html>

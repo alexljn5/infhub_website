@@ -1,6 +1,6 @@
 .header {
-    background-color: var(--color-accent-green-dim);
-    color: var(--color-accent-red);
+    background-color: var(--color-accent-dim);
+    color: var(--color-accent);
     padding: var(--space-md) var(--space-lg);
     text-align: center;
     width: 100%;
@@ -12,6 +12,7 @@
 
 .logo h1 {
     margin: 0;
+    font-family: var(--font-family-pixel);
     font-size: var(--font-size-lg);
     font-weight: bold;
 }

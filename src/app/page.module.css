@@ -3,7 +3,9 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    padding: var(--space-lg) 0;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: var(--space-lg) var(--content-padding);
 }
 
 .asciiWrapper {
@@ -12,11 +14,12 @@
     align-items: center;
     gap: var(--space-xl);
     margin: var(--space-lg) 0;
+    flex-wrap: wrap;
 }
 
 .bunnyAsciiLeft,
 .bunnyAsciiRight {
-    font-family: var(--font-family-mono);
+    font-family: var(--font-family-pixel);
     font-size: var(--font-size-xs);
     line-height: 0.4;
     white-space: pre;
@@ -38,10 +41,11 @@
     border-radius: var(--radius-xl);
     padding: var(--space-lg);
     margin: var(--space-lg) auto;
+    max-width: 100%;
 }
 
 .logoAscii {
-    font-family: var(--font-family-mono);
+    font-family: var(--font-family-pixel);
     font-size: var(--font-size-sm);
     line-height: 0.5;
     text-align: center;
@@ -49,7 +53,8 @@
     margin: 0;
     padding: 0;
     color: var(--color-text-primary);
-    width: 200%;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .boxContainers {
@@ -58,4 +63,52 @@
     gap: var(--space-xl);
     margin: var(--space-2xl) 0;
     flex-wrap: wrap;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+    .asciiWrapper {
+        gap: var(--space-lg);
+    }
+
+    .bunnyAsciiLeft,
+    .bunnyAsciiRight {
+        font-size: var(--font-size-xs);
+    }
+
+    .logoAscii {
+        font-size: var(--font-size-xs);
+    }
+
+    .boxContainers {
+        gap: var(--space-lg);
+    }
+}
+
+@media (max-width: 600px) {
+    .asciiWrapper {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+
+    .bunnyAsciiLeft,
+    .bunnyAsciiRight {
+        font-size: 6px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .logoContainer {
+        padding: var(--space-md);
+    }
+
+    .logoAscii {
+        font-size: 8px;
+    }
+
+    .boxContainers {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-md);
+    }
 }
