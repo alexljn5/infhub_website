@@ -167,4 +167,4 @@ EXPOSE 6667 6697
 
 USER inspircd
 
-CMD ["/opt/inspircd/inspircd"]
+CMD ["/opt/inspircd/inspircd", "start"]
