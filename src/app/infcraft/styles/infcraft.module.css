@@ -28,6 +28,30 @@
     text-align: center;
 }
 
+.infcraftButtons {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.infcraftBtn {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--color-accent-red-dim);
+    color: var(--color-accent-red);
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    text-decoration: none;
+    font-family: var(--font-family-pixel);
+    font-size: var(--font-size-sm);
+    transition: background 0.2s;
+}
+
+.infcraftBtn:hover {
+    background: var(--color-accent);
+    color: var(--color-bg-primary);
+}
+
 .ircFrameWrapper {
     width: 100%;
     height: 800px;
@@ -51,6 +75,10 @@
 @media (max-width: 600px) {
     .mainContent {
         padding: var(--space-md);
+    }
+
+    .infcraftButtons {
+        flex-direction: column;
     }
 
     .ircFrameWrapper {

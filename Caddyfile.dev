@@ -1,0 +1,8 @@
+{
+    admin off
+    auto_https off
+}
+
+localhost {
+    reverse_proxy web:3000
+}

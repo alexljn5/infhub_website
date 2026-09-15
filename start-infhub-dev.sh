@@ -60,4 +60,36 @@ echo -e "  \033[1;31m  Ctrl+C to stop\033[0m"
 echo -e "\033[1;31m============================================\033[0m"
 echo ""
 
+# Check if Docker is available and dev image exists
+if command -v docker >/dev/null 2>&1 && command -v docker compose >/dev/null 2>&1; then
+    if docker compose -f docker-compose-dev.yml images 2>/dev/null | grep -q "infhub-dev-web"; then
+        echo "  Starting dev server in Docker container..."
+        echo "  Starting Caddy (reverse proxy)..."
+        docker compose -f docker-compose-dev.yml up
+        exit 0
+    else
+        echo "  Docker available but dev image not found. Building..."
+        echo "  Starting Caddy (reverse proxy)..."
+        docker compose -f docker-compose-dev.yml up --build
+        exit 0
+    fi
+fi
+
+# Fallback: run directly with npm
+if command -v caddy >/dev/null 2>&1; then
+    echo "  Starting Caddy (reverse proxy)..."
+    cat <<CADDYFILE | caddy run --environ &
+{
+    admin off
+    auto_https off
+}
+
+localhost {
+    reverse_proxy localhost:$PORT
+}
+CADDYFILE
+    sleep 2
+    echo "  Caddy running at http://localhost"
+fi
+
 npm run dev -- --port "$PORT"

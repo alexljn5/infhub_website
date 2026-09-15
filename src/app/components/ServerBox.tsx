@@ -15,7 +15,7 @@ interface ServerBoxProps {
 export function ServerBox({ id, name, imageSrc, imageAlt, href }: ServerBoxProps) {
     return (
         <Link href={href} className={`${styles.serverBox} ${styles[id] || ''}`} data-server={id}>
-            <Image src={imageSrc} alt={imageAlt} className={styles.serverImage} />
+            <Image src={imageSrc} alt={imageAlt} className={styles.serverImage} unoptimized />
             <p>{name}</p>
         </Link>
     );

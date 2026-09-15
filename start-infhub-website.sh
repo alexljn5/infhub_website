@@ -3,20 +3,22 @@
 # INFHUB Homelab — Start Script
 # ============================================================
 # Starts the complete INFHUB Docker Compose stack:
+#   - caddy: Reverse proxy with automatic HTTPS (ports 80, 443)
 #   - web: Next.js website (host port 8080, container port 3000)
 #   - db: MariaDB 11 (internal only)
 #   - inspircd: InspIRCd 4.x IRC server (ports 6667, 6697)
 #   - lounge: The Lounge IRC web client (port 9000)
 #
 # Usage:
-#   bash start-infhub-website.sh          # Interactive startup
-#   bash start-infhub-website.sh --yes    # Non-interactive
-#   bash start-infhub-website.sh --help   # Show help
+#   sh start-infhub-website.sh          # Interactive startup
+#   sh start-infhub-website.sh --yes    # Non-interactive
+#   sh start-infhub-website.sh --help   # Show help
 #
 # Notes:
 #   - Stops any existing screen-based TheLounge before starting
 #   - Backs up existing InspIRCd and TheLounge configs before starting
 #   - Uses absolute paths for cron/non-interactive execution
+#   - Caddy provides automatic HTTPS for subdomains (infhub.org, infcraft.infhub.org)
 # ============================================================
 
 printf '\033[1;31m'
@@ -321,6 +323,7 @@ ok "Stack build and start command issued"
 # --- Step 7: Wait for Services Health ---
 step "Waiting for services to become healthy..."
 
+wait_for_service "caddy" "Caddy (HTTPS)" || warn "Caddy health check failed; check its logs"
 wait_for_service "db" "Database" || exit 1
 wait_for_service "inspircd" "InspIRCd" || exit 1
 wait_for_service "lounge" "Lounge" || warn "Lounge health check failed; check its logs"
@@ -346,14 +349,20 @@ echo ""
 echo "  Access your services:"
 echo ""
 echo "    Web Application    http://localhost:8080"
+echo "    Web (Caddy HTTP)   http://localhost"
+echo "    Web (Caddy HTTPS)  https://infhub.org"
 echo "    The Lounge IRC     http://localhost:9000"
 echo "    InspIRCd Plain     irc://localhost:6667"
 echo "    InspIRCd TLS       irc://localhost:6697"
 echo "    INFCRAFT page    http://localhost:8080/infcraft"
+echo "    INFCRAFT (HTTPS)   https://infcraft.infhub.org"
 echo ""
-echo "  For production (with reverse proxy):"
-echo "    Web Application    http://infhub.org"
+echo "  For production (with Caddy reverse proxy):"
+echo "    Web Application    https://infhub.org"
+echo "    INFCRAFT           https://infcraft.infhub.org"
 echo "    The Lounge IRC     http://irc.infhub.org"
+echo ""
+echo "  Caddy automatically obtains SSL certificates via Let's Encrypt"
 echo ""
 web_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' web 2>/dev/null || true)"
 db_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' db 2>/dev/null || true)"
@@ -397,12 +406,14 @@ echo ""
 echo "  Useful commands:"
 echo "    docker compose -f $COMPOSE_FILE ps                  — View running containers"
 echo "    docker compose -f $COMPOSE_FILE logs -f             — View all logs"
+echo "    docker compose -f $COMPOSE_FILE logs -f caddy        — View Caddy logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"
 echo "    docker compose -f $COMPOSE_FILE restart             — Restart all services"
 echo "    bash stop-infhub-website.sh                          — Stop all services"
 echo "    bash update-infhub-website.sh                        — Safe update and rebuild"
 echo "    bash restart-infhub-website.sh                       — Safe restart without rebuild"
+echo "    docker compose -f $COMPOSE_FILE exec caddy caddy validate — Validate Caddy config"
 echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
 echo "                                                       — Access database"
 echo ""
