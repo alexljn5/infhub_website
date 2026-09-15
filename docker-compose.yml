@@ -137,11 +137,13 @@ services:
     networks:
       - infhub-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      # Verify upstream reachability (requires Docker network) —
+      # curl localhost:80 alone passes even with no network endpoint.
+      test: ["CMD", "sh", "-c", "curl -sf http://web:3000/api/health"]
       interval: 30s
       timeout: 5s
-      start_period: 10s
-      retries: 3
+      start_period: 30s
+      retries: 6
 
 networks:
   infhub-network:

@@ -2,18 +2,13 @@
     admin off
 }
 
+infhub.org — primary site (Let's Encrypt validated)
 infhub.org {
     reverse_proxy web:3000
 }
 
-www.infhub.org {
-    reverse_proxy web:3000
-}
-
+infcraft.infhub.org — INFCRAFT subdomain (DNS A record required)
 infcraft.infhub.org {
     reverse_proxy web:3000
 }
 
-www.infcraft.infhub.org {
-    reverse_proxy web:3000
-}

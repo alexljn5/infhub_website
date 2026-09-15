@@ -149,6 +149,143 @@ wait_for_service() {
     return 1
 }
 
+# ------------------------------------------------------------
+# Caddy Network Recovery
+# ------------------------------------------------------------
+# Detects and repairs the failure mode where Docker Compose
+# creates the Caddy container without attaching it to any
+# network (Status=running, Networks={}). This causes DNS,
+# upstream connectivity, and ACME/Let's Encrypt validation to
+# fail silently because the health check only probes localhost.
+# ------------------------------------------------------------
+
+recover_caddy_network() {
+    step "Validating Caddy Docker network attachment..."
+
+    local caddy_id=""
+    caddy_id="$(docker compose -f "$COMPOSE_FILE" ps -q caddy 2>/dev/null || true)"
+
+    if [[ -z "$caddy_id" ]]; then
+        err "Caddy container not found — cannot validate network"
+        return 1
+    fi
+    ok "Caddy container found: ${caddy_id:0:12}"
+
+    local caddy_status=""
+    caddy_status="$(docker inspect --format '{{.State.Status}}' "$caddy_id" 2>/dev/null || true)"
+    if [[ "$caddy_status" != "running" ]]; then
+        err "Caddy is not running (status: ${caddy_status:-unknown})"
+        return 1
+    fi
+    ok "Caddy is running"
+
+    # Check whether Caddy is attached to any Docker network
+    local attached_networks=""
+    attached_networks="$(docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$caddy_id" 2>/dev/null || true)"
+
+    if [[ -n "$attached_networks" ]]; then
+        ok "Caddy is already attached to network(s): $attached_networks"
+    else
+        warn "Caddy has NO network attachment (Networks={}) — attempting recovery"
+
+        # Determine the Docker network name dynamically
+        local compose_network=""
+
+        # Method 1: Search docker networks by name (most reliable —
+        # returns the actual Docker network name, e.g. infhub-website_infhub-network)
+        compose_network="$(docker network ls --filter 'name=infhub-network' --format '{{.Name}}' 2>/dev/null | head -1 || true)"
+
+        # Method 2: Construct from project name + network name
+        if [[ -z "$compose_network" ]]; then
+            local project_name=""
+            project_name="$(basename "$SCRIPT_DIR")"
+            compose_network="${project_name}_infhub-network"
+        fi
+
+        if [[ -z "$compose_network" ]]; then
+            err "Cannot determine the Compose network name"
+            return 1
+        fi
+
+        info "Using network: $compose_network"
+
+        docker network connect "$compose_network" "$caddy_id" || {
+            err "Failed to attach Caddy to network: $compose_network"
+            return 1
+        }
+        ok "Attached Caddy to network: $compose_network"
+
+        # Wait for network configuration to propagate
+        sleep 3
+    fi
+
+    # Verify network connectivity
+    info "Verifying Caddy network connectivity..."
+
+    # Check interface
+    local addr=""
+    addr="$(docker exec "$caddy_id" ip addr show eth0 2>/dev/null | grep 'inet ' | awk '{print $2}' || true)"
+    if [[ -z "$addr" ]]; then
+        err "Caddy has no IP address on eth0 — network attachment may not be fully configured"
+        return 1
+    fi
+    ok "Caddy IP address: $addr"
+
+    # Check default route
+    local route=""
+    route="$(docker exec "$caddy_id" ip route 2>/dev/null | grep default || true)"
+    if [[ -z "$route" ]]; then
+        err "Caddy has no default route — ip route output is empty"
+        return 1
+    fi
+    ok "Default route: $route"
+
+    # Determine gateway
+    local gateway=""
+    gateway="$(docker exec "$caddy_id" ip route 2>/dev/null | grep default | awk '{print $3}' || true)"
+    if [[ -z "$gateway" ]]; then
+        gateway="$(docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$v.IPAMConfig.Gateway}}{{end}}' "$caddy_id" 2>/dev/null || true)"
+    fi
+
+    if [[ -z "$gateway" ]]; then
+        err "Cannot determine Docker gateway address"
+        return 1
+    fi
+    ok "Docker gateway: $gateway"
+
+    # Check gateway connectivity
+    local ping_result=""
+    ping_result="$(docker exec "$caddy_id" ping -c 1 "$gateway" 2>&1 || true)"
+    if [[ "$ping_result" == *"$gateway"* ]] || [[ "$ping_result" == *"1 packet transmitted"* ]]; then
+        ok "Gateway ping successful"
+    elif ! docker exec "$caddy_id" which ping >/dev/null 2>&1; then
+        # ping not available — verify via DNS resolution instead
+        warn "ping not available in container — verifying gateway via DNS"
+        local dns_gw=""
+        dns_gw="$(docker exec "$caddy_id" getent hosts "$gateway" 2>&1 || true)"
+        if [[ -z "$dns_gw" ]]; then
+            err "Cannot verify gateway connectivity (ping unavailable, DNS also fails)"
+            return 1
+        fi
+        ok "Gateway reachable (verified via DNS resolution)"
+    else
+        err "Cannot ping Docker gateway $gateway"
+        echo "  Output: $ping_result"
+        return 1
+    fi
+
+    # Check external DNS resolution
+    local dns_result=""
+    dns_result="$(docker exec "$caddy_id" getent hosts acme-v02.api.letsencrypt.org 2>&1 || true)"
+    if [[ -z "$dns_result" ]]; then
+        err "External DNS resolution failed — Caddy cannot reach Let's Encrypt"
+        return 1
+    fi
+    ok "External DNS working: $(echo "$dns_result" | awk '{print $1}')"
+
+    ok "Caddy network validation and recovery complete"
+}
+
 # --- Step 1: Pre-flight Checks ---
 step "=== INFHUB Homelab Startup ==="
 echo "Stack directory: $SCRIPT_DIR"
@@ -329,7 +466,11 @@ wait_for_service "inspircd" "InspIRCd" || warn "InspIRCd health check failed; ch
 wait_for_service "lounge" "Lounge" || warn "Lounge health check failed; check its logs"
 wait_for_service "web" "Web app" || warn "Web health check failed; check its logs"
 
-# --- Step 8: Verify Caddy is running ---
+# --- Step 8: Recover Caddy network if needed ---
+step "Recovering Caddy network if needed..."
+recover_caddy_network || { err "Caddy network recovery failed"; err "Manual emergency recovery: docker network connect infhub-website_infhub-network infhub-caddy"; exit 1; }
+
+# --- Step 9: Verify Caddy is running ---
 step "Verifying Caddy is running..."
 caddy_running=$(docker compose -f "$COMPOSE_FILE" ps -q caddy 2>/dev/null || true)
 if [[ -n "$caddy_running" ]]; then
@@ -351,7 +492,7 @@ fi
 # If InspIRCd is crashing, TheLounge will be unhealthy.
 # Caddy only depends on web, so it starts independently.
 
-# --- Step 9: Verify TheLounge can reach InspIRCd ---
+# --- Step 10: Verify TheLounge can reach InspIRCd ---
 step "Verifying TheLounge can reach InspIRCd..."
 irc_port_check=$(docker compose -f "$COMPOSE_FILE" exec -T lounge nc -z inspircd 6667 2>&1 && echo "ok" || echo "fail")
 if [[ "$irc_port_check" == "ok" ]]; then
@@ -361,7 +502,7 @@ else
     info "Check TheLounge networks.json points to inspircd:6667 (or inspircd:6697 for TLS)"
 fi
 
-# --- Step 10: Display Status ---
+# --- Step 11: Display Status ---
 step "=== Startup Complete ==="
 echo ""
 echo "  +---------------------------------------------------+"
@@ -409,7 +550,7 @@ echo "  Container Status:"
 docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps
 echo ""
 
-# --- Step 11: Post-setup prompts ---
+# --- Step 12: Post-setup prompts ---
 response=$(ask "  Create a The Lounge admin user? (enter username, or n to skip)" "n")
 if [[ -n "$response" && "$response" != "n" && "$response" != "N" ]]; then
     echo "  Creating admin user '$response'..."
@@ -432,6 +573,8 @@ echo "    docker compose -f $COMPOSE_FILE ps                  — View running c
 echo "    docker compose -f $COMPOSE_FILE logs -f             — View all logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f caddy        — View Caddy logs"
 echo "    docker compose -f $COMPOSE_FILE exec caddy caddy validate — Validate Caddy config"
+echo "    bash start-infhub-website.sh — Restart stack with Caddy network recovery"
+echo "    docker network connect infhub-website_infhub-network infhub-caddy — Emergency: manually attach Caddy network"
 echo "    docker compose -f $COMPOSE_FILE restart caddy        — Restart Caddy only"
 echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"

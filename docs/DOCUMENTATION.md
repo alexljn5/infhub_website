@@ -116,6 +116,203 @@ infcraft.infhub.org {
 
 Each domain directive routes traffic to the Next.js web service running on port 3000 inside the Docker network.
 
+> **Note**: `www.infhub.org` and `www.infcraft.infhub.org` were removed from the Caddyfile because they produce NXDOMAIN (no DNS records exist). See the Docker Network Failure section for details.
+
+## Docker Network Failure — Caddy Missing Network Attachment
+
+### Incident Summary
+
+On one or more occasions, the `infhub-caddy` container was running and reported healthy, but Docker had created it with **no network endpoints**:
+
+```text
+docker inspect infhub-caddy
+# Status=running Networks={}
+```
+
+Inside the container, there was no network configuration at all:
+
+```text
+docker exec infhub-caddy ip route
+# (empty — no routes)
+```
+
+Connectivity to the Docker gateway failed:
+
+```text
+docker exec infhub-caddy ping -c 3 172.21.0.1
+# ping: sendto: Network unreachable
+```
+
+DNS resolution also failed. As a result, Caddy could not reach Let's Encrypt for ACME HTTP-01 validation, and external traffic received Cloudflare 525 (Origin Error).
+
+### Root Cause
+
+Docker Compose declared the correct network attachment in `docker-compose.yml`:
+
+```yaml
+caddy:
+    networks:
+      - infhub-network
+```
+
+However, during container recreation, Docker sometimes created the Caddy container **without actually attaching it to the declared network**. The Compose configuration was correct — the failure occurred at the Docker daemon level during container creation/recreation. This is a known Docker Compose race condition.
+
+The existing health check (`curl -f http://localhost:80`) only probed the container's localhost loopback, so it **passed even when Caddy had no network interface**. This masked the failure completely.
+
+### Actual Compose Network
+
+| Property | Value |
+|----------|-------|
+| Compose network name | `infhub-network` |
+| Docker network name | `infhub-website_infhub-network` |
+| Subnet | `172.21.0.0/16` |
+| Gateway | `172.21.0.1` |
+
+### Symptoms of the Failure
+
+- `docker inspect infhub-caddy` shows `Networks={}`
+- `docker exec infhub-caddy ip route` returns nothing (empty)
+- `docker exec infhub-caddy ping -c 3 172.21.0.1` returns `Network unreachable`
+- `docker exec infhub-caddy getent hosts acme-v02.api.letsencrypt.org` fails (DNS broken)
+- Caddy health check reports `healthy` (because it only checks localhost)
+- External access produces Cloudflare 525
+- Let's Encrypt ACME HTTP-01 validation fails
+
+### Why `Networks={}` and Empty `ip route` Are Significant
+
+- **`Networks={}`**: Docker created the container with zero network interfaces. The container is isolated from all Docker networks, including the one declared in Compose. No inter-container communication, no external DNS, no gateway access.
+- **Empty `ip route`**: The container has no routing table entries at all — not even a default route or link-local route. This means no packets can leave the container. This is distinct from a container that has an IP but no default route.
+
+### Manual Emergency Recovery
+
+If you discover Caddy has no network attachment:
+
+```bash
+docker network connect infhub-website_infhub-network infhub-caddy
+```
+
+After this command, Caddy receives:
+
+```text
+eth0: 172.21.0.2/16
+default via 172.21.0.1 dev eth0
+172.21.0.0/16 dev eth0 scope link src 172.21.0.2
+```
+
+Then verify:
+
+```bash
+docker exec infhub-caddy ping -c 3 172.21.0.1
+docker exec infhub-caddy getent hosts acme-v02.api.letsencrypt.org
+```
+
+### Permanent Automated Recovery
+
+The startup script `start-infhub-website.sh` now includes a `recover_caddy_network` function that runs automatically after the stack starts. It:
+
+1. Confirms the Caddy container exists and is running
+2. Checks whether Caddy is attached to any Docker network
+3. If not attached, dynamically determines the Compose network name and attaches it
+4. Verifies the container has an IP address on eth0
+5. Verifies a default route exists
+6. Verifies connectivity to the Docker gateway
+7. Verifies external DNS resolution works
+8. Fails loudly if recovery did not work
+
+The function is idempotent — running it repeatedly produces no errors if Caddy is already attached.
+
+To run it manually:
+
+```bash
+# The function runs automatically on startup
+# To run just the recovery:
+docker network connect infhub-website_infhub-network infhub-caddy
+```
+
+### Docker DNS Configuration
+
+The host Docker daemon is configured with:
+
+```json
+{
+  "dns": ["1.1.1.1", "8.8.8.8"]
+}
+```
+
+Validated with:
+
+```bash
+sudo dockerd --validate --config-file=/etc/docker/daemon.json
+```
+
+**Important distinction**: DNS configuration alone was **not** the original problem. Caddy had no network interface or default route. Once attached to the Docker network, DNS worked correctly because the daemon-level DNS configuration was already correct.
+
+### Caddy Health Check Improvement
+
+The original health check:
+
+```yaml
+test: ["CMD", "curl", "-f", "http://localhost:80"]
+```
+
+This checks only the container's localhost loopback. It **passes even when Caddy has no Docker network endpoint**, making it useless for detecting this class of failure.
+
+The improved health check:
+
+```yaml
+test: ["CMD", "sh", "-c", "curl -sf http://web:3000/api/health"]
+```
+
+This verifies that Caddy can reach the upstream `web` service on port 3000, which **requires a working Docker network connection**. If Caddy has no network, this health check fails.
+
+### Caddy Configuration and ACME
+
+The `Caddyfile` currently serves:
+
+- `infhub.org` — primary site (Let's Encrypt validated successfully)
+- `infcraft.infhub.org` — INFCRAFT subdomain (requires DNS A record)
+
+The following hostnames were **removed** from the Caddyfile because they produce NXDOMAIN:
+
+- `www.infhub.org` — no DNS A/AAAA/CNAME record exists
+- `www.infcraft.infhub.org` — no DNS A/AAAA/CNAME record exists
+
+Requesting Let's Encrypt certificates for nonexistent domains causes unnecessary ACME failures (NXDOMAIN looking up A/AAAA). If these subdomains are needed, add the DNS records first, then re-enable the corresponding blocks in the Caddyfile.
+
+### Incident Timeline
+
+| Time | Event |
+|------|-------|
+| T+0 | Caddy container running, reported healthy |
+| T+0 | `docker inspect` reveals `Networks={}` |
+| T+1 | `ip route` inside container returns empty |
+| T+2 | Ping to gateway fails: Network unreachable |
+| T+3 | DNS resolution fails inside container |
+| T+4 | Let's Encrypt ACME validation fails |
+| T+5 | Cloudflare returns 525 (Origin Error) |
+| T+6 | **Recovery**: `docker network connect infhub-website_infhub-network infhub-caddy` |
+| T+7 | Caddy receives eth0 172.21.0.2/16, default route via 172.21.0.1 |
+| T+8 | Ping to gateway succeeds |
+| T+9 | DNS resolution works |
+| T+10 | Let's Encrypt ACME HTTP-01 validation succeeds for infhub.org |
+| T+11 | Cloudflare 525 resolved |
+
+### Verification Commands
+
+After startup or recovery, verify the stack:
+
+```bash
+docker compose config
+docker compose ps
+docker inspect infhub-caddy --format 'Status={{.State.Status}} Networks={{json .NetworkSettings.Networks}}'
+docker exec infhub-caddy ip addr
+docker exec infhub-caddy ip route
+docker exec infhub-caddy ping -c 3 172.21.0.1
+docker exec infhub-caddy getent hosts acme-v02.api.letsencrypt.org
+docker exec infhub-caddy caddy validate --config /etc/caddy/Caddyfile
+curl -vk --resolve infhub.org:443:127.0.0.1 https://infhub.org/
+```
+
 ## Known Issues & Fixes
 
 ### Hydration Error with Dark Reader
