@@ -76,8 +76,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: inspircd
-      container_name: infhub-website-inspircd
-      restart: always
+    container_name: infhub-website-inspircd
+    restart: always
     ports:
       - "6667:6667"
       - "6697:6697"
@@ -133,8 +133,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      web:
-        condition: service_healthy
+      - web
     networks:
       - infhub-network
     healthcheck:
