@@ -106,7 +106,6 @@ wait_for_service() {
         container_id="$(docker compose -f "$COMPOSE_FILE" ps -q "$service" 2>/dev/null || true)"
 
         if [[ -z "$container_id" ]]; then
-            echo -n "  $label... waiting ($elapsed seconds)..."
             continue
         fi
 
@@ -128,8 +127,6 @@ wait_for_service() {
             echo "  Check logs: docker compose -f $COMPOSE_FILE logs $service"
             return 1
         fi
-
-        echo -n "  $label... waiting ($elapsed seconds)..."
     done
 
     err "$label did not become healthy within $((MAX_RETRIES * RETRY_INTERVAL)) seconds"
@@ -302,9 +299,9 @@ step "Building and starting the stack..."
 echo "  This may take a few minutes on first run (image builds + DB init)..."
 
 if [[ "$NO_BUILD" == true ]]; then
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans >/dev/null 2>&1
 else
-    docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
+    docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans >/dev/null 2>&1
 fi
 ok "Stack build and start command issued"
 

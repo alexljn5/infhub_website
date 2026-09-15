@@ -1,29 +1,48 @@
 .serverBox {
     background-color: var(--color-bg-tertiary);
-    border: 3px solid var(--color-accent-green-dim);
+    border: 3px solid var(--color-accent-dim);
     border-radius: var(--radius-md);
     padding: var(--space-md);
     text-align: center;
     min-width: 150px;
+    font-family: var(--font-family-pixel);
     transition: all var(--transition-base);
     user-select: none;
     display: inline-block;
+    position: relative;
+    overflow: hidden;
+}
+
+.serverBox::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 34, 34, 0.08), transparent 60%);
+    opacity: 0;
+    transition: opacity var(--transition-base);
 }
 
 .serverBox:hover {
-    border-color: var(--color-accent-green);
-    box-shadow: var(--shadow-green);
-    transform: scale(1.05);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-accent);
+    transform: translateY(-4px) scale(1.03);
+}
+
+.serverBox:hover::before {
+    opacity: 1;
 }
 
 .serverBox:active {
-    transform: scale(0.95);
+    transform: translateY(0) scale(0.97);
 }
 
 .serverBox p {
     margin: var(--space-sm) 0 0 0;
     font-size: var(--font-size-md);
     font-weight: bold;
+    font-family: var(--font-family-pixel);
+    position: relative;
+    z-index: 1;
 }
 
 .serverImage {
@@ -31,32 +50,34 @@
     height: 128px;
     display: block;
     margin: 0 auto;
+    position: relative;
+    z-index: 1;
 }
 
 /* Server-specific border colors */
 .infcraftBox {
-    border-color: var(--color-accent-red);
+    border-color: var(--color-accent);
 }
 
 .infcraftBox:hover {
-    border-color: var(--color-accent-red);
-    box-shadow: var(--shadow-red);
+    border-color: var(--color-accent-light);
+    box-shadow: var(--shadow-accent-strong);
 }
 
 .inftaleBox {
-    border-color: var(--color-accent-red);
+    border-color: var(--color-accent);
 }
 
 .inftaleBox:hover {
-    border-color: var(--color-accent-red);
-    box-shadow: var(--shadow-red);
+    border-color: var(--color-accent-light);
+    box-shadow: var(--shadow-accent-strong);
 }
 
 .infrrariaBox {
-    border-color: var(--color-accent-red);
+    border-color: var(--color-accent);
 }
 
 .infrrariaBox:hover {
-    border-color: var(--color-accent-red);
-    box-shadow: var(--shadow-red);
+    border-color: var(--color-accent-light);
+    box-shadow: var(--shadow-accent-strong);
 }

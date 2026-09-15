@@ -2,7 +2,10 @@
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     text-align: center;
-    padding: var(--space-sm);
+    padding: var(--space-md) var(--space-sm);
     width: 100%;
     font-family: var(--font-family-pixel);
+    border-top: 1px solid var(--color-accent-dim);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.1em;
 }

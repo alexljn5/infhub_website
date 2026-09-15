@@ -347,16 +347,16 @@ assert_port_is_free
 
 if [[ "$RESTART_ONLY" == true ]]; then
     step "Restarting existing stack..."
-    compose up -d --remove-orphans
+    compose up -d --remove-orphans >/dev/null 2>&1
     ok "Stack restarted without rebuilding"
 else
     step "Building and starting stack..."
     response="$(ask "Rebuild images and restart?" "Y")"
     if [[ "$response" == "N" ]]; then
-        compose up -d --remove-orphans
+        compose up -d --remove-orphans >/dev/null 2>&1
         ok "Stack started without rebuilding"
     else
-        compose up -d --build --remove-orphans
+        compose up -d --build --remove-orphans >/dev/null 2>&1
         ok "Stack rebuilt and started"
     fi
 fi

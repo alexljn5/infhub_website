@@ -146,6 +146,7 @@ Client boundaries should be as small as possible. Keep data fetching, database a
 - Feature layouts own feature-specific navigation or chrome.
 - Metadata and robots policy belong in the relevant layout or page.
 - API routes must never opt into search indexing.
+- The home page owns its own hero presentation, status indicators, and navigation cards.
 
 ### TypeScript
 
@@ -177,7 +178,7 @@ src/app/infcraft/
 └── lib/                     # Feature-specific server utilities
 ```
 
-The home page follows the same pattern with `page.tsx` and `page.module.css` co-located.
+The home page follows the same pattern with `page.tsx` and `page.module.css` co-located. It owns its own hero presentation, status indicators, and navigation cards rather than inheriting global chrome from the root layout.
 
 ### Module rules
 
@@ -372,10 +373,11 @@ export const fontFamilyPixel = "'FS Pixel Sans Unicode', monospace";
 
 ### Font usage
 
-- `--font-family-pixel` is the primary font for body text, all headings (`h1`–`h6`), and decorative elements.
+- `--font-family-pixel` is the primary font for body text, all headings (`h1`–`h6`), cards, footer, and decorative elements.
 - `--font-family-base` is available as a fallback for specific UI elements if needed.
 - `--font-family-mono` is used for code blocks and monospace contexts.
 - The pixel font is applied globally via `globals.css` (`body` and `h1`–`h6` selectors) so it cascades to all pages without per-file configuration.
+- Cards and footer explicitly use `var(--font-family-pixel)` in their modules to guarantee the pixel font is applied even when inheritance is interrupted.
 - Do not hardcode font family names in CSS Modules or components. Always use the CSS custom property or import from `src/globals.js`.
 
 ---
@@ -657,6 +659,7 @@ Both scripts:
 - refuse to replace an unknown port owner
 - preserve persistent volumes
 - verify service health after startup
+- keep Compose build/start output detached so the terminal is not flooded with progress lines
 
 The restart wrapper runs the update script in restart-only mode and is the
 preferred plug-and-play recovery command.
@@ -755,6 +758,10 @@ Before merging a page or feature:
 - [ ] Spacing and typography use `clamp()` for responsiveness.
 - [ ] Layout respects `--content-max-width` and `--content-padding`.
 - [ ] Responsive breakpoints are handled in the relevant module.
+- [ ] The home page hero, status indicators, and navigation cards are intentionally styled.
+- [ ] The pixel font is applied to body text, headings, cards, and footer.
+- [ ] ASCII artwork is readable and not vertically squished.
+- [ ] Startup and update scripts keep Compose output detached or quiet.
 - [ ] Legacy code is only referenced for migration context.
 - [ ] API routes are authenticated and rate-limited unless explicitly public.
 - [ ] API errors use the standard JSON shape.

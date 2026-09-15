@@ -15,37 +15,53 @@ export default async function HomePage() {
 
     return (
         <div className={styles.container}>
-            <div className={styles.asciiWrapper}>
-                <pre className={styles.bunnyAsciiLeft}>{bunnyAscii}</pre>
-                <div className={styles.logoContainer}>
-                    <pre className={styles.logoAscii}>{infhubAscii}</pre>
+            <section className={styles.heroSection}>
+                <div className={styles.asciiWrapper}>
+                    <pre className={styles.bunnyAsciiLeft}>{bunnyAscii}</pre>
+                    <div className={styles.logoContainer}>
+                        <pre className={styles.logoAscii}>{infhubAscii}</pre>
+                    </div>
+                    <pre className={styles.bunnyAsciiRight}>{bunnyAscii}</pre>
                 </div>
-                <pre className={styles.bunnyAsciiRight}>{bunnyAscii}</pre>
-            </div>
+                <div className={styles.heroCopy}>
+                    <p className={styles.tagline}>Welcome to the INFHUB network</p>
+                    <h1 className={styles.heroTitle}>One hub. Infinite worlds.</h1>
+                    <p className={styles.heroDescription}>
+                        A gothic gateway to INFCRAFT, INFTALE, and INFRRARIA.
+                    </p>
+                </div>
+                <div className={styles.statusBar}>
+                    <span className={styles.statusDot}></span>
+                    <span>ALL SYSTEMS ONLINE</span>
+                </div>
+            </section>
 
-            <div className={styles.boxContainers}>
-                <ServerBox
-                    id="infcraftBox"
-                    name="INFCRAFT"
-                    imageSrc={infcraftLogo}
-                    imageAlt="INFCRAFT"
-                    href="https://infcraft.infhub.org"
-                />
-                <ServerBox
-                    id="inftaleBox"
-                    name="INFTALE"
-                    imageSrc={pixelArtBurger}
-                    imageAlt="INFTALE"
-                    href="/infcraft"
-                />
-                <ServerBox
-                    id="infrrariaBox"
-                    name="INFRRARIA"
-                    imageSrc={pixelArtBurger}
-                    imageAlt="INFRRARIA"
-                    href="/infcraft"
-                />
-            </div>
+            <section className={styles.serversSection}>
+                <h2 className={styles.sectionTitle}>SELECT YOUR REALM</h2>
+                <div className={styles.boxContainers}>
+                    <ServerBox
+                        id="infcraftBox"
+                        name="INFCRAFT"
+                        imageSrc={infcraftLogo}
+                        imageAlt="INFCRAFT"
+                        href="https://infcraft.infhub.org"
+                    />
+                    <ServerBox
+                        id="inftaleBox"
+                        name="INFTALE"
+                        imageSrc={pixelArtBurger}
+                        imageAlt="INFTALE"
+                        href="/infcraft"
+                    />
+                    <ServerBox
+                        id="infrrariaBox"
+                        name="INFRRARIA"
+                        imageSrc={pixelArtBurger}
+                        imageAlt="INFRRARIA"
+                        href="/infcraft"
+                    />
+                </div>
+            </section>
         </div>
     );
 }

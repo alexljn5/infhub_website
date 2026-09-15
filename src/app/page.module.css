@@ -5,7 +5,29 @@
     width: 100%;
     max-width: var(--content-max-width);
     margin: 0 auto;
-    padding: var(--space-lg) var(--content-padding);
+    padding: var(--space-2xl) var(--content-padding);
+    position: relative;
+}
+
+.heroSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: var(--space-xl) 0 var(--space-2xl);
+    position: relative;
+}
+
+.heroSection::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, var(--color-accent-dim), transparent);
+    opacity: 0.4;
 }
 
 .asciiWrapper {
@@ -21,7 +43,7 @@
 .bunnyAsciiRight {
     font-family: var(--font-family-pixel);
     font-size: var(--font-size-xs);
-    line-height: 0.4;
+    line-height: 0.8;
     white-space: pre;
     margin: 0;
     padding: 0;
@@ -37,17 +59,19 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 3px solid var(--color-text-primary);
+    border: 3px solid var(--color-accent-dim);
     border-radius: var(--radius-xl);
     padding: var(--space-lg);
     margin: var(--space-lg) auto;
     max-width: 100%;
+    background: var(--color-bg-secondary);
+    box-shadow: var(--shadow-accent);
 }
 
 .logoAscii {
     font-family: var(--font-family-pixel);
     font-size: var(--font-size-sm);
-    line-height: 0.5;
+    line-height: 0.9;
     text-align: center;
     white-space: pre;
     margin: 0;
@@ -57,11 +81,96 @@
     overflow-x: auto;
 }
 
+.heroCopy {
+    text-align: center;
+    margin: var(--space-lg) 0 var(--space-md);
+    position: relative;
+    z-index: 1;
+}
+
+.tagline {
+    font-size: var(--font-size-sm);
+    color: var(--color-accent-light);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-sm);
+}
+
+.heroTitle {
+    font-size: var(--font-size-xl);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-sm);
+    text-shadow: 0 0 12px rgba(255, 34, 34, 0.6);
+}
+
+.heroDescription {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.statusBar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-accent-dim);
+    border-radius: var(--radius-md);
+    background: rgba(255, 34, 34, 0.06);
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.15em;
+    color: var(--color-accent-light);
+    position: relative;
+    z-index: 1;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 0 8px var(--color-accent);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.serversSection {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-2xl) 0;
+    position: relative;
+    z-index: 1;
+}
+
+.sectionTitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-accent);
+    letter-spacing: 0.25em;
+    text-align: center;
+    margin-bottom: var(--space-xl);
+    text-shadow: 0 0 10px rgba(255, 34, 34, 0.5);
+}
+
 .boxContainers {
     display: flex;
     justify-content: center;
     gap: var(--space-xl);
-    margin: var(--space-2xl) 0;
+    margin: 0;
     flex-wrap: wrap;
 }
 
@@ -86,6 +195,14 @@
 }
 
 @media (max-width: 600px) {
+    .container {
+        padding: var(--space-lg) var(--content-padding);
+    }
+
+    .heroSection {
+        padding: var(--space-lg) 0 var(--space-xl);
+    }
+
     .asciiWrapper {
         flex-direction: column;
         gap: var(--space-md);
@@ -104,6 +221,10 @@
 
     .logoAscii {
         font-size: 8px;
+    }
+
+    .heroTitle {
+        font-size: var(--font-size-lg);
     }
 
     .boxContainers {
