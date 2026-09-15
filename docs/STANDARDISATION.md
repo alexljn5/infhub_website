@@ -375,8 +375,9 @@ export const fontFamilyPixel = "'FS Pixel Sans Unicode', monospace";
 
 - `--font-family-pixel` is the primary font for body text, all headings (`h1`–`h6`), cards, footer, and decorative elements.
 - `--font-family-base` is available as a fallback for specific UI elements if needed.
-- `--font-family-mono` is used for code blocks and monospace contexts.
+- `--font-family-mono` is used for ASCII art, code blocks, and other alignment-sensitive text.
 - The pixel font is applied globally via `globals.css` (`body` and `h1`–`h6` selectors) so it cascades to all pages without per-file configuration.
+- ASCII art uses `var(--font-family-mono)` instead of the pixel font to preserve its fixed-width alignment and prevent stretching.
 - Cards and footer explicitly use `var(--font-family-pixel)` in their modules to guarantee the pixel font is applied even when inheritance is interrupted.
 - Do not hardcode font family names in CSS Modules or components. Always use the CSS custom property or import from `src/globals.js`.
 
