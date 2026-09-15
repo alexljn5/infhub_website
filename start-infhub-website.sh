@@ -114,6 +114,7 @@ wait_for_service() {
     local status=""
     local health=""
     local elapsed=0
+    local last_progress=0
 
     for ((i=0; i<MAX_RETRIES; i++)); do
         sleep "$RETRY_INTERVAL"
@@ -141,6 +142,12 @@ wait_for_service() {
             err "$label container reports unhealthy"
             echo "  Check logs: docker compose -f $COMPOSE_FILE logs $service"
             return 1
+        fi
+
+        # Progress indicator — print a dot every 10 seconds so it doesn't look like a hang
+        if [[ $((elapsed % 10)) -eq 0 && $elapsed -ne $last_progress ]]; then
+            last_progress=$elapsed
+            printf "  \033[1;31m[wait]\033[0m %s still starting... (%ds)\n" "$label" "$elapsed"
         fi
     done
 
@@ -508,6 +515,9 @@ echo ""
 echo "  +---------------------------------------------------+"
 echo "  |            INFHUB Stack is Running!               |"
 echo "  +---------------------------------------------------+"
+echo ""
+echo -e "  \033[1;31m[Jim]\033[0m Jim vomits fire in your face."
+echo -e "  \033[1;31m[Jim]\033[0m The flames taste like cinnamon. You're welcome."
 echo ""
 echo "  Access your services:"
 echo ""
