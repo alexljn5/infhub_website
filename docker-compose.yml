@@ -137,8 +137,6 @@ services:
     depends_on:
       web:
         condition: service_healthy
-      lounge:
-        condition: service_healthy
     networks:
       - infhub-network
     healthcheck:

@@ -28,10 +28,13 @@ When running `sh start-infhub-dev.sh`, the Next.js development server starts on 
 
 When running `sh start-infhub-website.sh`, Docker Compose starts all services:
 
-1. **web** (Next.js): Built and served by the production server on port 8080
-2. **db** (MariaDB): Database server (internal only, not exposed to host)
-3. **inspircd** (InspIRCd): IRC server on ports 6667 and 6697
-4. **lounge** (TheLounge): Web IRC client on port 9000
+1. **caddy** (Caddy): Reverse proxy with automatic HTTPS (ports 80, 443)
+2. **web** (Next.js): Built and served by the production server on port 8080
+3. **db** (MariaDB): Database server (internal only, not exposed to host)
+4. **inspircd** (InspIRCd): IRC server on ports 6667 and 6697
+5. **lounge** (TheLounge): Web IRC client on port 9000
+
+Caddy depends only on the `web` service. InspIRCd and TheLounge have a separate dependency chain (TheLounge depends on InspIRCd).
 
 ### Next.js Basics (First Time Users)
 
@@ -76,12 +79,14 @@ sh update-infhub-website.sh     # Update services
 | InspIRCd TLS | irc://localhost:6697 | 6697 |
 | INFCRAFT | http://localhost:8080/infcraft | 8080 |
 | INFCRAFT (subdomain) | https://infcraft.infhub.org | 443 |
+| Caddy (Prod) | http://localhost / https://infhub.org | 80, 443 |
 
 ## DNS & Redirection
 
 For DNS subdomains (e.g., infcraft.infhub.org):
 - DNS A record must point to your server IP
 - Caddy handles subdomain routing and automatic HTTPS
+- Caddy depends only on the `web` service (not on InspIRCd or TheLounge)
 - If DNS subdomain doesn't route, check:
   1. DNS A record points to server IP
   2. Caddy container is running (`docker compose ps caddy`)
@@ -94,6 +99,8 @@ Caddy is a modern web server that provides:
 - **Automatic HTTPS**: Automatically obtains and renews SSL certificates via Let's Encrypt
 - **Subdomain routing**: Routes traffic based on the Host header (e.g., `infcraft.infhub.org` → web service)
 - **Reverse proxy**: Forwards requests to the Next.js application on port 3000
+
+Caddy is part of the production Docker Compose stack and depends only on the `web` service being healthy. It starts independently of InspIRCd and TheLounge, so even if IRC services are down, Caddy will still serve the web application.
 
 ### Caddyfile Configuration
 
@@ -124,6 +131,16 @@ If DNS subdomains don't route correctly:
 - Ensure reverse proxy forwards to the correct port (8080 for web)
 - For local development, use `localhost` or `127.0.0.1` instead of domain names
 
+### InspIRCd Crash Loop / TheLounge Unhealthy
+
+If InspIRCd is restarting and TheLounge is unhealthy:
+- InspIRCd and TheLounge have a dependency chain: TheLounge depends on InspIRCd
+- If InspIRCd crashes, TheLounge will be unhealthy (can't connect to IRC)
+- Caddy only depends on the web service, so it starts independently
+- Check InspIRCd logs: `docker compose logs inspircd`
+- Check TheLounge config: ensure `networks.json` points to `inspircd:6667`
+- The startup script will warn (not exit) on InspIRCd/Lounge failures so you can still access the web app and Caddy
+
 ## Development Docker Setup
 
 For local development in a Docker container:
@@ -151,7 +168,7 @@ In non-Docker mode, if the `caddy` binary is available, it starts with inline co
 
 ```
 infhub_website/
-├── docker-compose.yml      # Production Docker Compose (with Caddy)
+├── docker-compose.yml      # Production Docker Compose (web, db, inspircd, lounge, caddy)
 ├── docker-compose-dev.yml  # Development Docker Compose (web + caddy)
 ├── Dockerfile              # Production Docker image
 ├── Dockerfile.dev          # Development Docker image
@@ -183,3 +200,5 @@ infhub_website/
 - Caddy automatically obtains and renews SSL certificates via Let's Encrypt
 - The web service still exposes port 8080 for direct access (development/debugging)
 - Caddy routes port 80/443 traffic to the web service on port 3000
+- Caddy depends only on the `web` service; InspIRCd and TheLounge have a separate dependency chain
+- The startup script warns (not exits) on InspIRCd/Lounge failures so the web app and Caddy remain accessible

@@ -325,11 +325,33 @@ step "Waiting for services to become healthy..."
 
 wait_for_service "caddy" "Caddy (HTTPS)" || warn "Caddy health check failed; check its logs"
 wait_for_service "db" "Database" || exit 1
-wait_for_service "inspircd" "InspIRCd" || exit 1
+wait_for_service "inspircd" "InspIRCd" || warn "InspIRCd health check failed; check its logs"
 wait_for_service "lounge" "Lounge" || warn "Lounge health check failed; check its logs"
 wait_for_service "web" "Web app" || warn "Web health check failed; check its logs"
 
-# --- Step 8: Verify TheLounge can reach InspIRCd ---
+# --- Step 8: Verify Caddy is running ---
+step "Verifying Caddy is running..."
+caddy_running=$(docker compose -f "$COMPOSE_FILE" ps -q caddy 2>/dev/null || true)
+if [[ -n "$caddy_running" ]]; then
+    ok "Caddy container is running"
+    caddy_health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$caddy_running" 2>/dev/null || true)"
+    if [[ "$caddy_health" == "healthy" ]]; then
+        ok "Caddy is healthy"
+    elif [[ "$caddy_health" == "starting" ]]; then
+        warn "Caddy is still starting — give it a moment"
+    else
+        warn "Caddy health check reports: ${caddy_health:-unknown}"
+    fi
+else
+    warn "Caddy container not found — Caddy may have failed to start"
+    info "Check: docker compose -f $COMPOSE_FILE logs caddy"
+fi
+
+# Note: InspIRCd and TheLounge have a dependency chain.
+# If InspIRCd is crashing, TheLounge will be unhealthy.
+# Caddy only depends on web, so it starts independently.
+
+# --- Step 9: Verify TheLounge can reach InspIRCd ---
 step "Verifying TheLounge can reach InspIRCd..."
 irc_port_check=$(docker compose -f "$COMPOSE_FILE" exec -T lounge nc -z inspircd 6667 2>&1 && echo "ok" || echo "fail")
 if [[ "$irc_port_check" == "ok" ]]; then
@@ -339,7 +361,7 @@ else
     info "Check TheLounge networks.json points to inspircd:6667 (or inspircd:6697 for TLS)"
 fi
 
-# --- Step 9: Display Status ---
+# --- Step 10: Display Status ---
 step "=== Startup Complete ==="
 echo ""
 echo "  +---------------------------------------------------+"
@@ -368,12 +390,14 @@ web_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' web 2>/dev
 db_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' db 2>/dev/null || true)"
 inspircd_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' inspircd 2>/dev/null || true)"
 lounge_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' lounge 2>/dev/null || true)"
+caddy_name="$(docker compose -f "$COMPOSE_FILE" ps --format '{{.Name}}' caddy 2>/dev/null || true)"
 
 echo "  Managed services:"
 echo "    Website/Next.js:   ${web_name:-web}"
 echo "    Database:          ${db_name:-db} (internal)"
 echo "    InspIRCd:          ${inspircd_name:-inspircd}"
 echo "    TheLounge:         ${lounge_name:-lounge}"
+echo "    Caddy (proxy):     ${caddy_name:-caddy}"
 echo ""
 echo "  Persistent data:"
 echo "    Database:          db-data volume"
@@ -385,7 +409,7 @@ echo "  Container Status:"
 docker compose -f "$COMPOSE_FILE" ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || docker compose -f "$COMPOSE_FILE" ps
 echo ""
 
-# --- Step 10: Post-setup prompts ---
+# --- Step 11: Post-setup prompts ---
 response=$(ask "  Create a The Lounge admin user? (enter username, or n to skip)" "n")
 if [[ -n "$response" && "$response" != "n" && "$response" != "N" ]]; then
     echo "  Creating admin user '$response'..."
@@ -407,13 +431,14 @@ echo "  Useful commands:"
 echo "    docker compose -f $COMPOSE_FILE ps                  — View running containers"
 echo "    docker compose -f $COMPOSE_FILE logs -f             — View all logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f caddy        — View Caddy logs"
+echo "    docker compose -f $COMPOSE_FILE exec caddy caddy validate — Validate Caddy config"
+echo "    docker compose -f $COMPOSE_FILE restart caddy        — Restart Caddy only"
 echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge logs"
 echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"
 echo "    docker compose -f $COMPOSE_FILE restart             — Restart all services"
 echo "    bash stop-infhub-website.sh                          — Stop all services"
 echo "    bash update-infhub-website.sh                        — Safe update and rebuild"
 echo "    bash restart-infhub-website.sh                       — Safe restart without rebuild"
-echo "    docker compose -f $COMPOSE_FILE exec caddy caddy validate — Validate Caddy config"
 echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
 echo "                                                       — Access database"
 echo ""
