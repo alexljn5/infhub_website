@@ -113,43 +113,6 @@
     margin: 0 auto;
 }
 
-.statusBar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-accent-dim);
-    border-radius: var(--radius-md);
-    background: rgba(255, 34, 34, 0.06);
-    font-size: var(--font-size-xs);
-    letter-spacing: 0.15em;
-    color: var(--color-accent-light);
-    position: relative;
-    z-index: 1;
-}
-
-.statusDot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--color-accent);
-    box-shadow: 0 0 8px var(--color-accent);
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.4;
-    }
-}
-
 .serversSection {
     width: 100%;
     display: flex;

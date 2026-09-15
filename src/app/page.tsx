@@ -30,10 +30,6 @@ export default async function HomePage() {
                         A gothic gateway to INFCRAFT, INFTALE, and INFRRARIA.
                     </p>
                 </div>
-                <div className={styles.statusBar}>
-                    <span className={styles.statusDot}></span>
-                    <span>ALL SYSTEMS ONLINE</span>
-                </div>
             </section>
 
             <section className={styles.serversSection}>
