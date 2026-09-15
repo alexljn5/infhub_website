@@ -109,14 +109,18 @@ The `Caddyfile` defines routing rules:
 infhub.org {
     reverse_proxy web:3000
 }
+www.infhub.org {
+    reverse_proxy web:3000
+}
 infcraft.infhub.org {
+    reverse_proxy web:3000
+}
+www.infcraft.infhub.org {
     reverse_proxy web:3000
 }
 ```
 
-Each domain directive routes traffic to the Next.js web service running on port 3000 inside the Docker network.
-
-> **Note**: `www.infhub.org` and `www.infcraft.infhub.org` were removed from the Caddyfile because they produce NXDOMAIN (no DNS records exist). See the Docker Network Failure section for details.
+Each domain directive routes traffic to the Next.js web service running on port 3000 inside the Docker network. All hostnames have DNS A records configured.
 
 ## Docker Network Failure — Caddy Missing Network Attachment
 
@@ -270,14 +274,11 @@ This verifies that Caddy can reach the upstream `web` service on port 3000, whic
 The `Caddyfile` currently serves:
 
 - `infhub.org` — primary site (Let's Encrypt validated successfully)
-- `infcraft.infhub.org` — INFCRAFT subdomain (requires DNS A record)
+- `www.infhub.org` — www variant (DNS A record exists)
+- `infcraft.infhub.org` — INFCRAFT subdomain (DNS A record: 213.197.11.201)
+- `www.infcraft.infhub.org` — www variant (DNS A record exists)
 
-The following hostnames were **removed** from the Caddyfile because they produce NXDOMAIN:
-
-- `www.infhub.org` — no DNS A/AAAA/CNAME record exists
-- `www.infcraft.infhub.org` — no DNS A/AAAA/CNAME record exists
-
-Requesting Let's Encrypt certificates for nonexistent domains causes unnecessary ACME failures (NXDOMAIN looking up A/AAAA). If these subdomains are needed, add the DNS records first, then re-enable the corresponding blocks in the Caddyfile.
+All hostnames have DNS A records. If any hostname produces NXDOMAIN in the future, verify the DNS records are correctly configured before re-enabling the corresponding blocks in the Caddyfile.
 
 ### Incident Timeline
 
@@ -394,7 +395,7 @@ infhub_website/
 - For local development, use `sh start-infhub-dev.sh` (auto-detects Docker)
 - Docker dev container uses `docker-compose-dev.yml` and `Dockerfile.dev`
 - The dev script automatically builds the Docker image if it doesn't exist
-- Caddy provides automatic HTTPS for subdomains (infhub.org, infcraft.infhub.org) in production
+- Caddy provides automatic HTTPS for subdomains (infhub.org, www.infhub.org, infcraft.infhub.org, www.infcraft.infhub.org) in production
 - Caddy runs in dev mode without SSL (auto_https off) since domains don't resolve locally
 - Caddy automatically obtains and renews SSL certificates via Let's Encrypt
 - The web service still exposes port 8080 for direct access (development/debugging)
