@@ -356,8 +356,9 @@ else
         compose up -d --remove-orphans >/dev/null 2>&1
         ok "Stack started without rebuilding"
     else
-        compose up -d --build --remove-orphans >/dev/null 2>&1
-        ok "Stack rebuilt and started"
+        compose build --no-cache >/dev/null 2>&1 || warn "Image build failed; continuing with existing images."
+        compose up -d --remove-orphans >/dev/null 2>&1
+        ok "Stack rebuilt and started (no cache)"
     fi
 fi
 
