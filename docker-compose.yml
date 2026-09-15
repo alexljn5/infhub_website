@@ -76,17 +76,15 @@ services:
       context: .
       dockerfile: Dockerfile
       target: inspircd
-    container_name: infhub-website-inspircd
-    restart: always
+      container_name: infhub-website-inspircd
+      restart: always
     ports:
       - "6667:6667"
       - "6697:6697"
     volumes:
-      - /home/alexljn5/INFHUB/inf_irc/inspircd/run:/home/inspircd/inspircd/run
-      - inspircd-data:/home/inspircd/inspircd/data
+      - /home/alexljn5/INFHUB/inf_irc/inspircd/run:/opt/inspircd/conf
+      - inspircd-data:/opt/inspircd/data
       - /etc/ssl/certs/irc.crt:/etc/ssl/certs/irc.crt:ro
-    environment:
-      - INSPIRCD_HOME=/home/inspircd/inspircd
     depends_on:
       db:
         condition: service_healthy
