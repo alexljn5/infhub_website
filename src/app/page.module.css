@@ -59,13 +59,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 3px solid var(--color-accent-dim);
+    border: 3px solid var(--color-accent);
     border-radius: var(--radius-xl);
     padding: var(--space-lg);
     margin: var(--space-lg) auto;
     max-width: 100%;
     background: var(--color-bg-secondary);
-    box-shadow: var(--shadow-accent);
+    box-shadow: 0 0 12px rgba(255, 34, 34, 0.25);
 }
 
 .logoAscii {
@@ -204,13 +204,14 @@
     }
 
     .asciiWrapper {
-        flex-direction: column;
+        flex-direction: row;
         gap: var(--space-md);
+        flex-wrap: nowrap;
     }
 
     .bunnyAsciiLeft,
     .bunnyAsciiRight {
-        font-size: 6px;
+        font-size: 4px;
         max-width: 100%;
         overflow-x: auto;
     }
