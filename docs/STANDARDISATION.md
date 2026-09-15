@@ -37,9 +37,9 @@ project-root/
 ├── docs/
 │   └── STANDARDISATION.md
 ├── src/
-│   ├── app/                         # Next.js App Router and page modules
-│   │   ├── layout.tsx               # Root layout
-│   │   ├── page.tsx                 # Home page
+│   │   ├── app/                         # Next.js App Router and page modules
+│   │   │   ├── layout.tsx               # Root layout (no header — pages own their chrome)
+│   │   │   ├── page.tsx                 # Home page
 │   │   ├── page.module.css          # Home page styles
 │   │   ├── globals.css              # Global reset, design tokens, @font-face
 │   │   ├── api/                     # Route handlers
@@ -141,7 +141,8 @@ Client boundaries should be as small as possible. Keep data fetching, database a
 
 ### Layouts and metadata
 
-- `src/app/layout.tsx` owns the document shell, global styles, header, and footer.
+- `src/app/layout.tsx` owns the document shell, global styles, and footer only.
+- Pages own their own chrome (header, navigation, etc.) — the root layout intentionally has no header so each page controls its own presentation.
 - Feature layouts own feature-specific navigation or chrome.
 - Metadata and robots policy belong in the relevant layout or page.
 - API routes must never opt into search indexing.
@@ -329,7 +330,8 @@ Define reusable values in `globals.css`:
 - Use custom properties for themeable values.
 - Use `clamp()` for responsive sizing of spacing, typography, and layout values.
 - Do not add vendor prefixes manually; let the Next.js CSS pipeline handle them.
-- Do not use global selectors from a module to style unrelated pages.
+- Global typography selectors (`body`, `h1`–`h6`) belong in `globals.css` — these apply site-wide by design.
+- All other global selectors should be avoided; use CSS Modules or feature styles instead.
 - Do not keep active CSS under `src/legacy/css/`.
 
 ### Responsive breakpoints
@@ -370,9 +372,10 @@ export const fontFamilyPixel = "'FS Pixel Sans Unicode', monospace";
 
 ### Font usage
 
-- `--font-family-pixel` is used for headings, ASCII art, and decorative elements.
-- `--font-family-base` is used for body text and UI elements.
+- `--font-family-pixel` is the primary font for body text, all headings (`h1`–`h6`), and decorative elements.
+- `--font-family-base` is available as a fallback for specific UI elements if needed.
 - `--font-family-mono` is used for code blocks and monospace contexts.
+- The pixel font is applied globally via `globals.css` (`body` and `h1`–`h6` selectors) so it cascades to all pages without per-file configuration.
 - Do not hardcode font family names in CSS Modules or components. Always use the CSS custom property or import from `src/globals.js`.
 
 ---

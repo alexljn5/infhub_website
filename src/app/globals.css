@@ -86,11 +86,20 @@ html {
 }
 
 body {
-    font-family: var(--font-family-base);
+    font-family: var(--font-family-pixel);
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
     min-height: 100vh;
     line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-family-pixel);
 }
 
 body {
