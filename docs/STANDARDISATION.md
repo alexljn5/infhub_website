@@ -772,7 +772,7 @@ Before merging a page or feature:
 - [ ] Responsive breakpoints are handled in the relevant module.
 - [ ] The home page hero, navigation cards, and ASCII artwork are intentionally styled.
 - [ ] The pixel font is applied to body text, headings, cards, and footer.
-- [ ] ASCII artwork is readable, not vertically squished, and sits outside the logo box.
+- [ ] ASCII artwork is readable, not vertically squished, sits outside the logo box, and is never scrollable.
 - [ ] Startup and update scripts keep Compose output detached or quiet.
 - [ ] Update builds use `--no-cache` so stale layers do not accumulate.
 - [ ] No credentials, passwords, tokens, or secrets are hardcoded anywhere in the repository.
