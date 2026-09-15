@@ -30,24 +30,27 @@
     opacity: 0.4;
 }
 
-.asciiWrapper {
+.asciiRow {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: var(--space-xl);
     margin: var(--space-lg) 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    width: 100%;
 }
 
 .bunnyAsciiLeft,
 .bunnyAsciiRight {
     font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
-    line-height: 0.8;
+    line-height: 0.4;
     white-space: pre;
     margin: 0;
     padding: 0;
     color: var(--color-text-primary);
+    vertical-align: middle;
+    overflow: hidden;
 }
 
 .bunnyAsciiRight {
@@ -175,14 +178,28 @@
 }
 
 /* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+
+    .bunnyAsciiLeft,
+    .bunnyAsciiRight {
+        font-size: 8px;
+        line-height: 0.5;
+    }
+
+    .logoAscii {
+        font-size: var(--font-size-xs);
+    }
+}
+
 @media (max-width: 900px) {
-    .asciiWrapper {
+    .asciiRow {
         gap: var(--space-lg);
     }
 
     .bunnyAsciiLeft,
     .bunnyAsciiRight {
-        font-size: var(--font-size-xs);
+        font-size: 6px;
+        line-height: 0.5;
     }
 
     .logoAscii {
@@ -203,15 +220,15 @@
         padding: var(--space-lg) 0 var(--space-xl);
     }
 
-    .asciiWrapper {
-        flex-direction: row;
-        gap: var(--space-md);
-        flex-wrap: nowrap;
+    .asciiRow {
+        gap: var(--space-sm);
+        flex-wrap: wrap;
     }
 
     .bunnyAsciiLeft,
     .bunnyAsciiRight {
         font-size: 4px;
+        line-height: 0.5;
         max-width: 100%;
         overflow-x: auto;
     }

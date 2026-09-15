@@ -16,7 +16,7 @@ export default async function HomePage() {
     return (
         <div className={styles.container}>
             <section className={styles.heroSection}>
-                <div className={styles.asciiWrapper}>
+                <div className={styles.asciiRow}>
                     <pre className={styles.bunnyAsciiLeft}>{bunnyAscii}</pre>
                     <div className={styles.logoContainer}>
                         <pre className={styles.logoAscii}>{infhubAscii}</pre>
