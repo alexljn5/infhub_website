@@ -595,4 +595,4 @@ echo "    bash restart-infhub-website.sh                       — Safe restart 
 echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
 echo "                                                       — Access database"
 echo ""
-echo "  Happy hacking! 🚀"
+echo "  Happy hacking!"
