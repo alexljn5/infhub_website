@@ -464,7 +464,24 @@ else
 fi
 ok "Stack build and start command issued"
 
-# --- Step 7: Wait for Services Health ---
+# ------------------------------------------------------------
+# Step 7: Recover Caddy network immediately
+# ------------------------------------------------------------
+# Caddy must have a working Docker network before we wait for
+# health checks or ACME certificate provisioning. Without this,
+# Caddy can start successfully but cannot reach DNS/Let's Encrypt.
+# ------------------------------------------------------------
+
+step "Recovering Caddy network..."
+
+recover_caddy_network || {
+    err "Caddy network recovery failed"
+    err "Manual emergency recovery:"
+    err "docker network connect infhub-website_infhub-network infhub-caddy"
+    exit 1
+}
+
+# --- Step 8: Wait for Services Health ---
 step "Waiting for services to become healthy..."
 
 wait_for_service "caddy" "Caddy (HTTPS)" || warn "Caddy health check failed; check its logs"
@@ -472,10 +489,6 @@ wait_for_service "db" "Database" || exit 1
 wait_for_service "inspircd" "InspIRCd" || warn "InspIRCd health check failed; check its logs"
 wait_for_service "lounge" "Lounge" || warn "Lounge health check failed; check its logs"
 wait_for_service "web" "Web app" || warn "Web health check failed; check its logs"
-
-# --- Step 8: Recover Caddy network if needed ---
-step "Recovering Caddy network if needed..."
-recover_caddy_network || { err "Caddy network recovery failed"; err "Manual emergency recovery: docker network connect infhub-website_infhub-network infhub-caddy"; exit 1; }
 
 # --- Step 9: Verify Caddy is running ---
 step "Verifying Caddy is running..."
