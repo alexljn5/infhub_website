@@ -1,0 +1,145 @@
+.headerControls {
+    position: absolute;
+    top: 12px;
+    right: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.ircButton {
+    background: transparent;
+    color: white;
+    border: 1px solid var(--color-border-subtle);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+}
+
+.loginToggle {
+    background: transparent;
+    color: white;
+    border: 1px solid var(--color-border-subtle);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+}
+
+.headerAuthDropdown {
+    position: relative;
+}
+
+.headerAuthDropdown.open .formContainer.compact {
+    display: block;
+}
+
+.formContainer.compact {
+    position: absolute;
+    top: 36px;
+    right: 0;
+    width: 260px;
+    padding: 12px;
+    max-width: 320px;
+    background-color: rgba(10, 10, 10, 0.95);
+    border: 1px solid #550000;
+    box-shadow: var(--shadow-dropdown);
+    display: none;
+    z-index: 1000;
+}
+
+.formTabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    border-bottom: none;
+}
+
+.tabButton {
+    padding: 6px 8px;
+    font-size: var(--font-size-sm);
+    background-color: transparent;
+    color: white;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all var(--transition-base);
+}
+
+.tabButton:hover {
+    color: var(--color-accent-red);
+}
+
+.tabButton.active {
+    border-bottom-color: var(--color-accent-red);
+    color: var(--color-accent-red);
+}
+
+.form {
+    display: none;
+}
+
+.form.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.formGroup {
+    margin-bottom: var(--space-sm);
+}
+
+.formGroup label {
+    display: block;
+    font-size: var(--font-size-xs);
+    margin-bottom: 2px;
+    color: var(--color-accent-red-pale);
+    font-weight: bold;
+}
+
+.formGroup input {
+    width: 100%;
+    padding: 8px;
+    font-size: var(--font-size-sm);
+    background-color: #2a2a2a;
+    border: 1px solid var(--color-accent-red);
+    border-radius: var(--radius-sm);
+    color: white;
+    box-sizing: border-box;
+    transition: all var(--transition-base);
+}
+
+.formGroup input:focus {
+    outline: none;
+    border-color: var(--color-accent-red-light);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.submitBtn {
+    width: 100%;
+    padding: 8px;
+    font-size: var(--font-size-sm);
+    background-color: var(--color-accent-red);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.submitBtn:hover {
+    background-color: var(--color-accent-red-light);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+}

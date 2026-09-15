@@ -1,0 +1,17 @@
+.header {
+    background-color: var(--color-accent-green-dim);
+    color: var(--color-accent-red);
+    padding: var(--space-md) var(--space-lg);
+    text-align: center;
+    width: 100%;
+}
+
+.logo {
+    display: inline-block;
+}
+
+.logo h1 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+}

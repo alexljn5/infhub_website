@@ -3,13 +3,31 @@
 Official website for the INFHUB project, now serving as the central management
 point for the complete INFHUB web + database + IRC stack.
 
+## Architecture
+
+This project is built with **Next.js** (App Router) and follows a modular,
+feature-based organisation. See [`docs/STANDARDISATION.md`](docs/STANDARDISATION.md)
+for full architectural conventions and coding standards.
+
+### Key Principles
+
+- **Pages as modules**: Each page is a self-contained module with its own
+  components, styles, and logic grouped together.
+- **Server Components by default**: Pages and components that don't need
+  interactivity are Server Components for optimal performance.
+- **Scoped styles**: CSS is scoped per module/component via CSS Modules or
+  co-located stylesheets. No global scope pollution.
+- **TypeScript**: All new code is written in TypeScript with strict mode enabled.
+- **API routes are authenticated and rate-limited**: All API endpoints enforce
+  authentication and rate limiting per the STANDARDISATION document.
+
 ## Managed Services
 
 This Docker Compose stack manages four services:
 
 | Service     | Description                          | Port (host) | Internal Port |
 |-------------|--------------------------------------|-------------|---------------|
-| `php-app`   | Apache + PHP 8.4 web application     | 8080        | 80            |
+| `web`       | Next.js 15 web application           | 3000        | 3000          |
 | `db`        | MariaDB 11 (database)                | — (internal)| 3306          |
 | `inspircd`  | InspIRCd 4.x IRC server              | 6667, 6697  | 6667, 6697    |
 | `lounge`    | The Lounge IRC web client            | 9000        | 9000          |
@@ -18,18 +36,58 @@ All services run on a shared `infhub-network` (bridge). TheLounge connects to
 InspIRCd via the Compose service name `inspircd` (e.g., `inspircd:6667` for
 plaintext or `inspircd:6697` for TLS).
 
-## Persistent Data
+## Project Structure
 
-| Data                  | Location                                              | Type         |
-|-----------------------|-------------------------------------------------------|--------------|
-| MariaDB data           | `db-data` Docker volume                               | Named volume |
-| InspIRCd data          | `inspircd-data` Docker volume                         | Named volume |
-| InspIRCd config        | `/home/alexljn5/INFHUB/inf_irc/inspircd/run`          | Bind mount   |
-| TheLounge config       | `/home/alexljn5/.thelounge`                           | Bind mount   |
-| IRC TLS certificate    | `/etc/ssl/certs/irc.crt`                              | Bind mount   |
-
-MariaDB is **not** exposed to the host — it is accessible only from other
-containers on the `infhub-network`.
+```
+project-root/
+├── docs/
+│   └── STANDARDISATION.md          # Architecture & coding standards
+├── src/
+│   ├── app/                        # Next.js App Router root
+│   │   ├── layout.tsx              # Root layout
+│   │   ├── page.tsx                # Home page (/)
+│   │   ├── globals.css             # Global styles & design tokens
+│   │   ├── api/                    # API route handlers
+│   │   │   ├── auth/
+│   │   │   │   ├── irc-auth/route.ts
+│   │   │   │   └── lounge-auth/route.ts
+│   │   │   └── health/route.ts
+│   │   ├── infcraft/               # Infcraft feature module
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx
+│   │   │   ├── irc/page.tsx
+│   │   │   ├── components/
+│   │   │   │   ├── InfcraftHeader.tsx
+│   │   │   │   └── AuthControls.tsx
+│   │   │   ├── styles/
+│   │   │   │   ├── infcraft.module.css
+│   │   │   │   ├── header.module.css
+│   │   │   │   └── auth.module.css
+│   │   ├── components/             # Shared components
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── ServerBox.tsx
+│   │   ├── hooks/                  # Shared hooks
+│   │   │   └── useClickableBoxes.ts
+│   │   ├── lib/                    # Shared utilities
+│   │   │   ├── auth.ts
+│   │   │   ├── db.ts
+│   │   │   └── rateLimit.ts
+│   │   └── types/                  # TypeScript types
+│   │       └── index.ts
+│   ├── database/
+│   │   └── schema.sql
+│   ├── img/                        # Static assets
+│   └── legacy/                     # Legacy PHP code (phased out)
+│       ├── php/
+│       ├── css/
+│       └── js/
+├── public/                         # Static files served at root
+├── next.config.js
+├── tsconfig.json
+├── docker-compose.yml
+└── .env.example
+```
 
 ## Quick Start
 
@@ -41,11 +99,24 @@ bash start-infhub-website.sh
 This will:
 1. Check prerequisites (Docker, Docker Compose)
 2. Ensure `.env` exists (creates from `.env.example` if needed)
-3. Stop any existing screen-based TheLounge
-4. Back up existing configs to `backups/`
-5. Build and start all four services
-6. Wait for health checks to pass
-7. Verify TheLounge can reach InspIRCd
+3. Build and start all services
+4. Wait for health checks to pass
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
 
 ## Management Scripts
 
@@ -54,20 +125,6 @@ This will:
 | `start-infhub-website.sh`    | Start the full stack (website, db, IRC, lounge)  |
 | `stop-infhub-website.sh`     | Stop the full stack (data preserved)             |
 | `update-infhub-website.sh`   | Pull images, rebuild, restart (data preserved)   |
-
-### Script Options
-
-```bash
-bash start-infhub-website.sh --yes        # Non-interactive (cron-friendly)
-bash start-infhub-website.sh --no-build   # Skip image rebuild
-bash start-infhub-website.sh --help       # Show help
-
-bash stop-infhub-website.sh --force       # Stop without confirmation
-
-bash update-infhub-website.sh --yes       # Non-interactive update
-```
-
-All scripts use absolute paths and work from cron/non-interactive shells.
 
 ## How TheLounge Connects to InspIRCd
 
@@ -90,34 +147,6 @@ The TheLounge `networks.json` config should reference the InspIRCd service:
 For TLS (port 6697), set `"tls": true` and ensure the IRC certificate is
 mounted at `/etc/ssl/certs/irc.crt` inside the TheLounge container.
 
-## InspIRCd Configuration
-
-InspIRCd config is bind-mounted from the host at:
-`/home/alexljn5/INFHUB/inf_irc/inspircd/run`
-
-The InspIRCd image is built from the `inspircd` target in the root `Dockerfile`.
-To rebuild it:
-
-```bash
-docker compose build inspircd
-```
-
-## Migration from Screen-based TheLounge
-
-The old screen-based TheLounge launcher is no longer needed. The
-`start-infhub-website.sh` script will:
-1. Detect and stop any running `screen` session named `thelounge`
-2. Kill any lingering `thelounge` processes
-3. Back up the existing `/home/alexljn5/.thelounge` config
-4. Start TheLounge as a Docker container
-
-## Backups
-
-The start and update scripts automatically create backups in `backups/`:
-- TheLounge config backup
-- InspIRCd config backup
-- MariaDB database dump
-
 ## Production Deployment
 
 For production, place the stack behind a reverse proxy (Nginx, Caddy, or
@@ -127,9 +156,11 @@ Traefik) with HTTPS. See `DEPLOY.md` for detailed instructions.
 
 - Docker Engine 24.0+
 - Docker Compose v2.20+ (plugin)
+- Node.js 20+ (for local development)
 - Git (for cloning the repository)
 
 ```bash
 docker --version
 docker compose version
+node --version
 ```

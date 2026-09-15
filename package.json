@@ -2,9 +2,26 @@
     "name": "infhub_website",
     "version": "0.0.1",
     "description": "Official website for INFHUB.",
-    "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "next": "^15.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "zod": "^3.24.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "typescript": "^5.7.0",
+        "@upstash/ratelimit": "^2.0.0",
+        "@upstash/redis": "^1.35.0"
     },
     "repository": {
         "type": "git",
@@ -13,7 +30,6 @@
     "keywords": [],
     "author": "",
     "license": "ISC",
-    "type": "commonjs",
     "bugs": {
         "url": "https://github.com/alexljn5/infhub-website/issues"
     },

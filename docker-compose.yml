@@ -2,7 +2,7 @@
 # INFHUB Docker Compose Stack
 # ============================================================
 # Manages the complete INFHUB web/IRC stack:
-#   - php-app: Apache + PHP 8.4 website (port 8080)
+#   - web: Next.js website (port 3000)
 #   - db: MariaDB 11 (internal only, no host port)
 #   - inspircd: InspIRCd 4.x IRC server (ports 6667, 6697)
 #   - lounge: The Lounge IRC web client (port 9000)
@@ -18,16 +18,20 @@
 # ============================================================
 
 services:
-  php-app:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-      target: php-app
-    container_name: infhub-website-php-app-1
+      target: nextjs
+    container_name: infhub-website
     ports:
-      - "8080:80"
+      - "3000:3000"
     volumes:
-      - ./src:/var/www/html
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./next.config.js:/app/next.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./next-env.d.ts:/app/next-env.d.ts
     restart: always
     depends_on:
       db:
@@ -40,18 +44,14 @@ services:
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       LOUNGE_HOST: lounge
       LOUNGE_PORT: 9000
+      SESSION_SECRET: ${SESSION_SECRET}
+      NEXT_PUBLIC_URL: http://localhost:3000
     networks:
       - infhub-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 5s
-      start_period: 10s
-      retries: 3
 
   db:
     image: mariadb:11
-    container_name: infhub-website-db-1
+    container_name: infhub-website-db
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
@@ -80,7 +80,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: inspircd
-    container_name: infhub-website-inspircd-1
+    container_name: infhub-website-inspircd
     restart: always
     ports:
       - "6667:6667"

@@ -4,7 +4,7 @@
 
 
 # ============================================================
-# PHP APPLICATION
+# PHP APPLICATION (Legacy - phased out)
 # ============================================================
 
 FROM php:8.4-apache AS php-app
@@ -36,6 +36,52 @@ HEALTHCHECK \
     CMD curl -f http://localhost/ || exit 1
 
 EXPOSE 80
+
+
+# ============================================================
+# NEXT.JS APPLICATION
+# ============================================================
+
+FROM node:20-alpine AS nextjs
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy source files
+COPY src/app ./src/app
+COPY public ./public
+COPY next.config.js ./next.config.js
+COPY tsconfig.json ./tsconfig.json
+COPY next-env.d.ts ./next-env.d.ts
+
+# Build Next.js application
+RUN npm run build
+
+# Production runner
+FROM node:20-alpine AS nextjs-runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy built application
+COPY --from=nextjs /app ./
+COPY --from=nextjs /app/node_modules ./node_modules
+COPY --from=nextjs /app/public ./public
+
+EXPOSE 3000
+
+HEALTHCHECK \
+    --interval=30s \
+    --timeout=5s \
+    --start-period=10s \
+    --retries=3 \
+    CMD wget -q -O /dev/null http://localhost:3000/api/health || exit 1
+
+CMD ["npm", "start"]
 
 
 # ============================================================

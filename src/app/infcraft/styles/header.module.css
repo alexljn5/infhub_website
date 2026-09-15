@@ -1,0 +1,13 @@
+.header {
+    background-color: var(--color-accent-red-dim);
+    color: var(--color-accent-red);
+    padding: var(--space-md) var(--space-lg);
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.header h1 {
+    margin: 0;
+}
