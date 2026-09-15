@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ratelimit } from '@/lib/rateLimit';
-import { verifySession } from '@/lib/auth';
+import { ratelimit } from '@/app/lib/rateLimit';
+import { verifySession } from '@/app/lib/auth';
 import { z } from 'zod';
 
 const loginSchema = z.object({
