@@ -138,8 +138,10 @@ If InspIRCd is restarting and TheLounge is unhealthy:
 - If InspIRCd crashes, TheLounge will be unhealthy (can't connect to IRC)
 - Caddy only depends on the web service, so it starts independently
 - Check InspIRCd logs: `docker compose logs inspircd`
+- If InspIRCd shows "Invalid command or none given", the Dockerfile CMD needs the `start` argument — ensure `CMD ["/opt/inspircd/inspircd", "start"]` in `Dockerfile`
 - Check TheLounge config: ensure `networks.json` points to `inspircd:6667`
 - The startup script will warn (not exit) on InspIRCd/Lounge failures so you can still access the web app and Caddy
+- After fixing InspIRCd, rebuild with `docker compose build inspircd`
 
 ## Development Docker Setup
 
