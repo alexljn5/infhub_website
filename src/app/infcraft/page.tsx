@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import styles from './styles/infcraft.module.css';
 
 export default function InfcraftPage() {
@@ -5,6 +6,19 @@ export default function InfcraftPage() {
         <div className={styles.mainContent}>
             <h2>Welcome to INFCRAFT</h2>
             <p>This is the forum page for INFCRAFT discussions and community.</p>
+            <div className={styles.infcraftButtons}>
+                <Link href="/" className={styles.infcraftBtn}>
+                    ← Back
+                </Link>
+                <a
+                    href="https://infcraft.infhub.org:8123"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.infcraftBtn}
+                >
+                    BlueMap
+                </a>
+            </div>
         </div>
     );
 }

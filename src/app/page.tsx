@@ -40,7 +40,7 @@ export default async function HomePage() {
                         name="INFCRAFT"
                         imageSrc={infcraftLogo}
                         imageAlt="INFCRAFT"
-                        href="https://infcraft.infhub.org"
+                        href="/infcraft"
                     />
                     <ServerBox
                         id="inftaleBox"

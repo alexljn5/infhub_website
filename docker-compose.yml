@@ -123,6 +123,31 @@ services:
       start_period: 15s
       retries: 3
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: infhub-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      lounge:
+        condition: service_healthy
+    networks:
+      - infhub-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
 networks:
   infhub-network:
     driver: bridge
@@ -130,3 +155,5 @@ networks:
 volumes:
   db-data:
   inspircd-data:
+  caddy_data:
+  caddy_config:
