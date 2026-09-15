@@ -500,6 +500,15 @@ export async function POST(request: NextRequest) {
 9. Do not add metadata that enables indexing for API routes.
 10. Keep authentication and rate-limiting in shared utilities instead of duplicating logic.
 
+### Credential handling
+
+- **Never hardcode credentials.** Database passwords, session secrets, Upstash tokens, and API keys must come from environment variables only.
+- `.env` is listed in `.gitignore` and must never be committed.
+- Secrets stay server-side. Do not expose them to client code, even with a `NEXT_PUBLIC_` prefix.
+- API responses must never include raw passwords, password hashes, session tokens, database credentials, or unnecessary PII. Return only the minimum fields needed by the caller (for example `id`, `username`, `role`).
+- Authenticated routes must verify the session before returning any data, even if the input is validated.
+- If a secret is ever committed by mistake, treat it as compromised: rotate it immediately and scrub the history before pushing.
+
 ---
 
 ## Assets
@@ -662,6 +671,7 @@ Both scripts:
 - preserve persistent volumes
 - verify service health after startup
 - keep Compose build/start output detached so the terminal is not flooded with progress lines
+- rebuild images with `--no-cache` on updates so stale layers do not accumulate and eat disk space
 
 The restart wrapper runs the update script in restart-only mode and is the
 preferred plug-and-play recovery command.
@@ -760,10 +770,14 @@ Before merging a page or feature:
 - [ ] Spacing and typography use `clamp()` for responsiveness.
 - [ ] Layout respects `--content-max-width` and `--content-padding`.
 - [ ] Responsive breakpoints are handled in the relevant module.
-- [ ] The home page hero, status indicators, and navigation cards are intentionally styled.
+- [ ] The home page hero, navigation cards, and ASCII artwork are intentionally styled.
 - [ ] The pixel font is applied to body text, headings, cards, and footer.
-- [ ] ASCII artwork is readable and not vertically squished.
+- [ ] ASCII artwork is readable, not vertically squished, and sits outside the logo box.
 - [ ] Startup and update scripts keep Compose output detached or quiet.
+- [ ] Update builds use `--no-cache` so stale layers do not accumulate.
+- [ ] No credentials, passwords, tokens, or secrets are hardcoded anywhere in the repository.
+- [ ] `.env` is present locally but never committed.
+- [ ] API responses never leak passwords, hashes, tokens, or database credentials.
 - [ ] Legacy code is only referenced for migration context.
 - [ ] API routes are authenticated and rate-limited unless explicitly public.
 - [ ] API errors use the standard JSON shape.
