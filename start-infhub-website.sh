@@ -3,7 +3,7 @@
 # INFHUB Homelab — Start Script
 # ============================================================
 # Starts the complete INFHUB Docker Compose stack:
-#   - php-app: Apache + PHP 8.4 website (port 8080)
+#   - web: Next.js website (host port 8080, container port 3000)
 #   - db: MariaDB 11 (internal only)
 #   - inspircd: InspIRCd 4.x IRC server (ports 6667, 6697)
 #   - lounge: The Lounge IRC web client (port 9000)
@@ -347,30 +347,30 @@ else
     warn "Lounge did not become healthy within $MAX_RETRIES seconds — check logs"
 fi
 
-# Wait for PHP app
-php_healthy=false
+# Wait for Next.js web app
+web_healthy=false
 elapsed=0
 for ((i=0; i<MAX_RETRIES; i++)); do
     sleep "$RETRY_INTERVAL"
     elapsed=$((elapsed + RETRY_INTERVAL))
-    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website-php-app-1 2>/dev/null || echo "")
+    health=$(docker inspect --format='{{.State.Health.Status}}' infhub-website 2>/dev/null || echo "")
     if [[ "$health" == "healthy" ]]; then
-        php_healthy=true
+        web_healthy=true
         break
     fi
-    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website-php-app-1 2>/dev/null || echo "")
+    container_status=$(docker inspect --format='{{.State.Status}}' infhub-website 2>/dev/null || echo "")
     if [[ "$container_status" != "running" ]]; then
-        err "PHP app container is not running (status: $container_status)"
-        echo "  Check logs: docker compose -f $COMPOSE_FILE logs php-app"
+        err "Next.js web container is not running (status: $container_status)"
+        echo "  Check logs: docker compose -f $COMPOSE_FILE logs web"
         exit 1
     fi
-    echo -n "  PHP app... waiting ($elapsed seconds)..."
+    echo -n "  Web app... waiting ($elapsed seconds)..."
 done
 echo ""
-if [[ "$php_healthy" == true ]]; then
-    ok "PHP app healthy after $elapsed seconds"
+if [[ "$web_healthy" == true ]]; then
+    ok "Web app healthy after $elapsed seconds"
 else
-    warn "PHP app did not become healthy within $MAX_RETRIES seconds — check logs"
+    warn "Web app did not become healthy within $MAX_RETRIES seconds — check logs"
 fi
 
 # --- Step 8: Verify TheLounge can reach InspIRCd ---
@@ -403,7 +403,7 @@ echo "    Web Application    http://infhub.org"
 echo "    The Lounge IRC     http://irc.infhub.org"
 echo ""
 echo "  Managed services:"
-echo "    Website/PHP:       infhub-website-php-app-1"
+echo "    Website/Next.js:   infhub-website"
 echo "    Database:          infhub-website-db-1 (internal)"
 echo "    InspIRCd:          infhub-website-inspircd-1"
 echo "    TheLounge:         infhub_lounge"

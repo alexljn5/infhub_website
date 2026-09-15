@@ -4,3 +4,6 @@ legalfluff.txt
 database_delete
 notes.txt
 DEPLOY.md
+/.next
+/node_modules
+.next-test.log

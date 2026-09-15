@@ -46,13 +46,15 @@ FROM node:20-alpine AS nextjs
 
 WORKDIR /app
 
-# Install dependencies (use npm install to generate lock file if needed)
-COPY package.json ./
-RUN npm install
+# Install locked dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Copy source files
+# Copy source files required by the Next.js build
 COPY src/app ./src/app
-COPY public ./public
+COPY src/lib ./src/lib
+COPY src/types ./src/types
+COPY src/img ./src/img
 COPY next.config.js ./next.config.js
 COPY tsconfig.json ./tsconfig.json
 COPY next-env.d.ts ./next-env.d.ts
@@ -70,7 +72,9 @@ ENV NODE_ENV=production
 # Copy built application
 COPY --from=nextjs /app ./
 COPY --from=nextjs /app/node_modules ./node_modules
-COPY --from=nextjs /app/public ./public
+
+RUN chown -R node:node /app
+USER node
 
 EXPOSE 3000
 

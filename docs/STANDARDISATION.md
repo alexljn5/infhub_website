@@ -1,6 +1,8 @@
-# STANDARDISATION
+# INFHUB Standardisation
 
-This document defines the architectural conventions, coding standards, and organisational patterns for the INFHUB website project. All code must adhere to these guidelines to ensure consistency, maintainability, and scalability.
+This document defines the architecture, organisation, and coding conventions for the INFHUB website. The active application is a **Next.js App Router** application. Legacy PHP, CSS, and JavaScript are retained for reference under `src/legacy/` and must not be served as the active application.
+
+The guiding idea is simple: **a page is a module, and a module owns its markup, styles, behaviour, data access, and tests where applicable.**
 
 ---
 
@@ -8,92 +10,98 @@ This document defines the architectural conventions, coding standards, and organ
 
 1. [Project Structure](#project-structure)
 2. [Next.js Conventions](#nextjs-conventions)
-3. [Page as Module Pattern](#page-as-module-pattern)
-4. [Component Standards](#component-standards)
-5. [CSS Organisation](#css-organisation)
-6. [JavaScript / TypeScript Standards](#javascript--typescript-standards)
-7. [API Route Standards](#api-route-standards)
-8. [Asset Management](#asset-management)
-9. [Naming Conventions](#naming-conventions)
-10. [Environment Variables](#environment-variables)
+3. [Page-as-Module Pattern](#page-as-module-pattern)
+4. [Components](#components)
+5. [HTML and JSX](#html-and-jsx)
+6. [CSS Organisation](#css-organisation)
+7. [JavaScript and TypeScript](#javascript-and-typescript)
+8. [API Routes](#api-routes)
+9. [Assets](#assets)
+10. [Naming Conventions](#naming-conventions)
+11. [Environment Variables](#environment-variables)
+12. [Docker and Permissions](#docker-and-permissions)
+13. [Legacy Migration](#legacy-migration)
+14. [Review Checklist](#review-checklist)
 
 ---
 
 ## Project Structure
 
-The project follows the **Next.js App Router** convention with a modular, feature-based organisation:
+The repository is organised around `src/`. There is **no root `public/` directory** and no active PHP entry point at `src/index.php`.
 
-```
+```text
 project-root/
 ├── docs/
-│   └── STANDARDISATION.md          # This document
+│   └── STANDARDISATION.md
 ├── src/
-│   ├── app/                        # Next.js App Router root
-│   │   ├── layout.tsx              # Root layout (wraps all pages)
-│   │   ├── page.tsx                # Home page (/)
-│   │   ├── globals.css             # Global styles (resets, tokens)
-│   │   ├── error.tsx               # Global error boundary
-│   │   ├── not-found.tsx           # Global 404 page
-│   │   ├── loading.tsx             # Global loading UI
-│   │   ├── api/                    # API route handlers
+│   ├── app/                         # Next.js App Router and page modules
+│   │   ├── layout.tsx               # Root layout
+│   │   ├── page.tsx                 # Home page
+│   │   ├── page.module.css          # Home page styles
+│   │   ├── globals.css              # Global reset and design tokens
+│   │   ├── api/                     # Route handlers
 │   │   │   ├── auth/
-│   │   │   │   ├── irc-auth/
-│   │   │   │   │   └── route.ts    # POST /api/auth/irc-auth
-│   │   │   │   └── lounge-auth/
-│   │   │   │       └── route.ts    # POST /api/auth/lounge-auth
-│   │   │   └── health/
-│   │   │       └── route.ts        # GET /api/health
-│   │   ├── infcraft/               # Infcraft feature module
-│   │   │   ├── layout.tsx          # Infcraft section layout
-│   │   │   ├── page.tsx            # /infcraft
-│   │   │   ├── irc/
-│   │   │   │   └── page.tsx        # /infcraft/irc
-│   │   │   ├── components/         # Infcraft-specific components
-│   │   │   │   ├── InfcraftHeader.tsx
-│   │   │   │   ├── AuthControls.tsx
-│   │   │   │   └── ServerBox.tsx
-│   │   │   ├── hooks/              # Infcraft-specific hooks
-│   │   │   │   └── useAuth.ts
-│   │   │   └── styles/             # Infcraft module styles
-│   │   │       ├── infcraft.css
-│   │   │       ├── header.css
-│   │   │       └── auth.css
-│   │   └── components/             # Shared/global components
-│   │       ├── Header.tsx
-│   │       ├── Footer.tsx
-│   │       ├── ServerBox.tsx
-│   │       └── ClickableBox.tsx
-│   ├── lib/                        # Shared utilities & helpers
-│   │   ├── db.ts                   # Database connection
-│   │   ├── auth.ts                 # Auth utilities
-│   │   └── rateLimit.ts            # Rate limiting utility
-│   ├── types/                      # TypeScript type definitions
+│   │   │   │   ├── irc-auth/route.ts
+│   │   │   │   └── lounge-auth/route.ts
+│   │   │   └── health/route.ts
+│   │   ├── components/              # Shared application components
+│   │   │   ├── Header.tsx
+│   │   │   ├── Header.module.css
+│   │   │   ├── Footer.tsx
+│   │   │   ├── Footer.module.css
+│   │   │   ├── ServerBox.tsx
+│   │   │   └── ServerBox.module.css
+│   │   ├── hooks/                   # Shared client hooks
+│   │   │   └── useClickableBoxes.ts
+│   │   └── infcraft/                # INFCRAFT feature module
+│   │       ├── layout.tsx
+│   │       ├── page.tsx
+│   │       ├── irc/page.tsx
+│   │       ├── components/
+│   │       │   ├── AuthControls.tsx
+│   │       │   └── InfcraftHeader.tsx
+│   │       └── styles/
+│   │           ├── auth.module.css
+│   │           ├── header.module.css
+│   │           └── infcraft.module.css
+│   ├── lib/                         # Shared server-side utilities
+│   │   ├── auth.ts
+│   │   ├── db.ts
+│   │   └── rateLimit.ts
+│   ├── types/                       # Shared TypeScript types
 │   │   └── index.ts
 │   ├── database/
-│   │   └── schema.sql              # Database schema
-│   ├── img/                        # Static images & assets
+│   │   └── schema.sql
+│   ├── img/                         # All static assets
 │   │   ├── logo/
+│   │   │   ├── favicon.ico
+│   │   │   ├── infcraft/infcraft_logo.png
+│   │   │   └── infhub/infhub_ascii.txt
 │   │   └── misc/
-│   └── legacy/                     # Legacy PHP code (phased out)
-│       ├── php/
+│   │       ├── bnuuyascii.txt
+│   │       └── pixel_art_burger.png
+│   └── legacy/                      # Preserved legacy implementation
+│       ├── index.php
 │       ├── css/
-│       └── js/
-├── public/                         # Static files served at root
-│   ├── img/
-│   ├── favicon.ico
-│   └── ...
+│       ├── js/
+│       └── php/
+├── Dockerfile
+├── docker-compose.yml
 ├── next.config.js
-├── tsconfig.json
 ├── package.json
-└── docker-compose.yml
+├── tsconfig.json
+└── .env.example
 ```
 
-### Key Principles
+### Structure rules
 
-- **Feature-first organisation**: Each feature (e.g., `infcraft`) owns its pages, components, styles, and hooks.
-- **Shared components** live in `src/app/components/` and are imported where needed.
-- **No mixing of concerns**: A component file contains only its markup; styles are co-located or in a matching `styles/` directory.
-- **Legacy code** is preserved under `src/legacy/` for reference but is not served.
+- `src/app/` contains routes, layouts, pages, and page-owned components.
+- `src/lib/` contains shared server-side utilities such as database, authentication, and rate-limiting code.
+- `src/types/` contains shared TypeScript interfaces and response types.
+- `src/img/` is the only asset directory used by the active application.
+- `src/legacy/` is archival code. It is not imported by new code and is not an application entry point.
+- Shared components that are used by more than one feature live in `src/app/components/`.
+- Feature-specific components, hooks, styles, and data access live beside the feature page.
 
 ---
 
@@ -101,92 +109,152 @@ project-root/
 
 ### App Router
 
-This project uses the **Next.js App Router** (`src/app/`). All pages, layouts, and API routes live under this directory.
-
-### File-based Routing
+This project uses the Next.js App Router with `src/app/` as its root. Routing is file-based:
 
 | Route | File |
-|-------|------|
+|---|---|
 | `/` | `src/app/page.tsx` |
 | `/infcraft` | `src/app/infcraft/page.tsx` |
 | `/infcraft/irc` | `src/app/infcraft/irc/page.tsx` |
+| `/api/health` | `src/app/api/health/route.ts` |
 | `/api/auth/irc-auth` | `src/app/api/auth/irc-auth/route.ts` |
 | `/api/auth/lounge-auth` | `src/app/api/auth/lounge-auth/route.ts` |
 
-### Layouts
+### Server Components by default
 
-- **Root layout** (`src/app/layout.tsx`): Defines `<html>` and `<body>`, imports `globals.css`, includes `<Header />` and `<Footer />`.
-- **Feature layouts** (e.g., `src/app/infcraft/layout.tsx`): Wrap feature-specific pages with feature-specific chrome (headers, navigation, etc.).
+Pages and components are Server Components unless they need browser-only behaviour. Do not add `'use client'` unless the file uses one or more of:
 
-### Server vs Client Components
+- React state or effects
+- Event handlers
+- Browser APIs such as `window`, `document`, or `localStorage`
+- A browser-dependent third-party library
 
-- **Default to Server Components**: Pages and components that don't need interactivity or browser APIs should be Server Components.
-- **Mark Client Components** with `'use client'` at the top of the file when they use:
-  - Event handlers (`onClick`, `onSubmit`, etc.)
-  - Browser APIs (`window`, `document`, `localStorage`)
-  - React hooks (`useState`, `useEffect`, etc.)
-  - Third-party libraries that depend on the browser
+Client boundaries should be as small as possible. Keep data fetching, database access, and authentication checks in Server Components or route handlers.
+
+### Layouts and metadata
+
+- `src/app/layout.tsx` owns the document shell, global styles, header, and footer.
+- Feature layouts own feature-specific navigation or chrome.
+- Metadata and robots policy belong in the relevant layout or page.
+- API routes must never opt into search indexing.
+
+### TypeScript
+
+- New application code is TypeScript.
+- `tsconfig.json` uses strict type checking.
+- Use explicit prop, request, response, and data types.
+- Do not use `any` in new code. Use a narrow interface, a discriminated union, or a typed database result.
+- Prefer named exports for components, hooks, utilities, and route handlers.
 
 ---
 
-## Page as Module Pattern
+## Page-as-Module Pattern
 
-Every page is treated as a **self-contained module**. Its associated files (markup, styles, scripts, data-fetching logic) are grouped together or referenced from a co-located directory.
+A page is a self-contained feature module. Its route file should remain focused on composition, while related concerns live beside it.
 
-### Module Anatomy
-
-```
+```text
 src/app/infcraft/
-├── page.tsx              # Page markup (Server Component by default)
-├── layout.tsx            # Layout wrapper for this section
-├── styles/
-│   ├── infcraft.css      # Page/section-level styles
-│   └── components.css    # Styles for components in this module
-├── components/
-│   ├── InfcraftHeader.tsx
-│   └── ServerBox.tsx
-├── hooks/
-│   └── useInfcraftData.ts
-└── lib/
-    └── fetchServer.ts
+├── page.tsx                 # Route composition
+├── layout.tsx               # Feature shell
+├── irc/page.tsx             # Child route
+├── components/              # Components used only by this feature
+│   ├── AuthControls.tsx
+│   └── InfcraftHeader.tsx
+├── styles/                  # Feature-scoped CSS Modules
+│   ├── auth.module.css
+│   ├── header.module.css
+│   └── infcraft.module.css
+├── hooks/                   # Feature-specific client hooks
+└── lib/                     # Feature-specific server utilities
 ```
 
-### Rules
+The home page follows the same pattern with `page.tsx` and `page.module.css` co-located.
 
-1. **Co-location**: Styles and components that belong to a page live in or near that page's directory.
-2. **No global scope pollution**: CSS is scoped to the module. Global styles only exist in `globals.css` (resets, CSS custom properties, typography).
-3. **Single responsibility**: Each component does one thing well.
-4. **Explicit imports**: Components and styles are imported explicitly — no implicit assumptions about file locations.
+### Module rules
+
+1. Keep page composition in the page file.
+2. Keep feature-specific components in that feature's `components/` directory.
+3. Keep feature-specific CSS in that feature's `styles/` directory or beside the component as a CSS Module.
+4. Keep feature-specific hooks in `hooks/`.
+5. Keep feature-specific server utilities in `lib/`.
+6. Import shared utilities from `src/lib/` and shared types from `src/types/`.
+7. Do not reach into another feature's internal files. Use a shared component or a small public API instead.
+8. Do not place unrelated global classes or scripts in a page module.
 
 ---
 
-## Component Standards
+## Components
 
-### Structure
+### Component file shape
 
 ```tsx
-// src/app/infcraft/components/InfcraftHeader.tsx
-'use client';  // Only if using hooks or event handlers
+// src/app/components/ServerBox.tsx
+'use client';
 
-import styles from './InfcraftHeader.module.css';
+import Image, { type StaticImageData } from 'next/image';
+import Link from 'next/link';
+import styles from './ServerBox.module.css';
 
-export function InfcraftHeader() {
-  return (
-    <header className={styles.header}>
-      <h1>INFCRAFT</h1>
-    </header>
-  );
+interface ServerBoxProps {
+    id: string;
+    name: string;
+    imageSrc: StaticImageData;
+    imageAlt: string;
+    href: string;
+}
+
+export function ServerBox({ id, name, imageSrc, imageAlt, href }: ServerBoxProps) {
+    return (
+        <Link href={href} className={`${styles.serverBox} ${styles[id] || ''}`} data-server={id}>
+            <Image src={imageSrc} alt={imageAlt} className={styles.serverImage} />
+            <p>{name}</p>
+        </Link>
+    );
 }
 ```
 
-### Rules
+### Component rules
 
-1. **Named exports**: Use named exports (`export function ComponentName`), not default exports.
-2. **PascalCase filenames**: `InfcraftHeader.tsx`, not `infcraft_header.tsx` or `InfcraftHeader.jsx`.
-3. **CSS Modules preferred**: Use `.module.css` or `.module.scss` for component-scoped styles. For module-level styles that don't fit CSS Modules, use a `styles/` directory with regular CSS files imported into the page or layout.
-4. **Props typed**: All props are explicitly typed with TypeScript interfaces or types.
-5. **No side effects in render**: Data fetching and side effects belong in Server Components, `useEffect`, or dedicated data-fetching layers.
-6. **Accessibility**: All interactive elements have appropriate ARIA attributes, keyboard handlers, and semantic HTML.
+- Use PascalCase filenames and named exports.
+- Put the component and its CSS Module next to each other when the component is shared.
+- Put feature-only components inside the feature's `components/` directory.
+- Type every prop.
+- Use semantic HTML (`header`, `nav`, `main`, `section`, `article`, `button`, and so on).
+- Give interactive controls accessible names and keyboard behaviour.
+- Do not use a `<div>` when a semantic element communicates the purpose better.
+- Do not put business logic inside a presentational component. Pass data in or call a typed utility.
+- Do not use client components for static content.
+
+---
+
+## HTML and JSX
+
+The active application uses JSX/TSX rather than standalone HTML files.
+
+### JSX rules
+
+- Keep markup close to the component that owns it.
+- Use self-closing tags for void elements.
+- Use `className`, `htmlFor`, and `aria-*` attributes.
+- Do not use inline styles for fixed layout or presentation. Use CSS Modules.
+- Inline styles are allowed only for values that are genuinely dynamic and cannot be represented by a class or CSS custom property.
+- Escape or safely render user-provided content. React escapes normal string children by default.
+- Do not use raw `dangerouslySetInnerHTML` unless the source is trusted and the reason is documented.
+- Keep comments focused on non-obvious intent, not a restatement of the markup.
+
+### Page example
+
+```tsx
+export default async function HomePage() {
+    const bunnyAscii = await readAssetText('misc/bnuuyascii.txt');
+
+    return (
+        <main>
+            <pre>{bunnyAscii}</pre>
+        </main>
+    );
+}
+```
 
 ---
 
@@ -194,210 +262,218 @@ export function InfcraftHeader() {
 
 ### Layers
 
-| Layer | Location | Purpose |
-|-------|----------|---------|
-| Global | `src/app/globals.css` | CSS resets, custom properties (design tokens), typography, utility classes |
-| Module | `src/app/[feature]/styles/` | Feature-level and component-level styles |
-| Component | `Component.module.css` (co-located) | Scoped styles for a single component |
+| Layer | Location | Responsibility |
+|---|---|---|
+| Global | `src/app/globals.css` | Reset, design tokens, typography, body-level layout |
+| Feature | `src/app/[feature]/styles/` | Feature and page composition styles |
+| Component | `Component.module.css` | Styles owned by one component |
 
-### CSS Custom Properties (Design Tokens)
+### Design tokens
 
-Define in `globals.css`:
+Define reusable values in `globals.css`:
 
 ```css
 :root {
-  /* Colors */
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #1a1a1a;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #cccccc;
-  --color-accent-green: #00FF00;
-  --color-accent-red: #FF0000;
-  --color-accent-green-dim: #457c46;
-  --color-accent-red-dim: #960a0a;
-
-  /* Spacing */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-
-  /* Typography */
-  --font-family-base: Arial, sans-serif;
-  --font-family-mono: monospace;
-  --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 20px;
-
-  /* Borders */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.3s ease;
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #1a1a1a;
+    --color-text-primary: #ffffff;
+    --color-accent-green: #00ff00;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --radius-md: 8px;
+    --font-family-mono: monospace;
 }
 ```
 
-### Rules
+### CSS rules
 
-1. **No inline styles** except for truly dynamic values (e.g., `style={{ width: `${percentage}%` }}`).
-2. **Use CSS custom properties** for any value that may change or be themed.
-3. **BEM or CSS Modules** for naming — no flat global class names outside `globals.css`.
-4. **Responsive design**: Use media queries in module CSS, not inline.
-5. **Vendor prefixes**: Use Autoprefixer (via Next.js/CSS pipeline) — do not manually add.
+- Prefer CSS Modules for component and feature styles.
+- Use lowercase module filenames when they live in a feature `styles/` directory.
+- Use descriptive class names that reflect purpose, not visual implementation.
+- Use custom properties for themeable values.
+- Keep responsive rules in the relevant module.
+- Do not add vendor prefixes manually; let the Next.js CSS pipeline handle them.
+- Do not use global selectors from a module to style unrelated pages.
+- Do not keep active CSS under `src/legacy/css/`.
 
 ---
 
-## JavaScript / TypeScript Standards
+## JavaScript and TypeScript
 
 ### Language
 
-- **TypeScript** is the default for all new code.
-- Existing JavaScript files should be migrated to TypeScript when touched.
+- TypeScript is the default for all new code.
+- Existing JavaScript is retained only under `src/legacy/js/`.
+- When legacy behaviour is needed, migrate it to a typed React component or hook.
+- Do not load legacy JavaScript with a `<script>` tag from the active application.
 
-### File Locations
+### Locations
 
-| Type | Location | Example |
-|------|----------|---------|
-| Page scripts | Page component itself | `src/app/page.tsx` |
-| Client hooks | `hooks/` in feature dir | `src/app/infcraft/hooks/useAuth.ts` |
-| Shared hooks | `src/app/hooks/` | `src/app/hooks/useClickOutside.ts` |
-| Utilities | `src/app/lib/` | `src/app/lib/api.ts` |
-| Types | `src/app/types/` | `src/app/types/index.ts` |
+| Concern | Location | Example |
+|---|---|---|
+| Page composition | Feature directory | `src/app/infcraft/page.tsx` |
+| Shared client hook | `src/app/hooks/` | `useClickableBoxes.ts` |
+| Feature client hook | Feature `hooks/` | `src/app/infcraft/hooks/useAuth.ts` |
+| Shared server utility | `src/lib/` | `rateLimit.ts` |
+| Feature server utility | Feature `lib/` | `src/app/infcraft/lib/fetchServer.ts` |
+| Shared types | `src/types/` | `ApiResponse.ts` or `index.ts` |
 
-### Rules
+### TypeScript rules
 
-1. **TypeScript strict mode**: Enable `strict: true` in `tsconfig.json`.
-2. **No `any` types**: Use explicit types, interfaces, or generics.
-3. **Named exports only**: `export function`, `export const`, `export class`.
-4. **No side effects at module level**: Wrap in functions or use explicit initialisation patterns.
-5. **Event handlers**: Use `'use client'` directive and React event types:
-   ```tsx
-   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => { ... };
-   ```
-6. **DOM manipulation**: Avoid `document`/`window` in Server Components. Use refs or client hooks.
-7. **Legacy JS migration**: Files under `src/legacy/js/` are preserved but should not be referenced by new code. Migrate functionality to React hooks or client components as needed.
-
-### Legacy JS Migration Map
-
-| Legacy File | New Location | Convert To |
-|-------------|-------------|------------|
-| `src/js/infhub/infhub_main.js` | `src/app/components/ClickableBox.tsx` | React component with event handler |
-| `src/js/infhub/clickableboxes.js` | `src/app/hooks/useClickableBoxes.ts` | Custom hook |
-| `src/js/infcraft/infcraft_main.js` | `src/app/infcraft/components/InfcraftHeader.tsx` | React component |
-| `src/js/infcraft/infcraft_registration_login_form.js` | `src/app/infcraft/components/AuthControls.tsx` | Client component |
+- Enable strict mode in `tsconfig.json`.
+- Use `unknown` before narrowing when a value comes from an external boundary.
+- Validate external input with Zod or an equivalent schema.
+- Type database rows and API responses instead of casting to `any`.
+- Keep hooks in `.ts` files and components in `.tsx` files.
+- Use `use client` only at the top of a client module.
+- Avoid side effects during module initialisation.
+- Use typed event handlers, for example `React.MouseEvent<HTMLButtonElement>`.
+- Keep browser APIs inside client components or client hooks.
 
 ---
 
-## API Route Standards
+## API Routes
 
-### Authentication
+### Security baseline
 
-All API routes **must** be authenticated unless explicitly documented as public (e.g., health check).
+API routes must be:
 
-### Rate Limiting
+- Authenticated
+- Rate-limited
+- Protected against unvalidated input
+- Excluded from search indexing
+- Consistent in their JSON error shape
 
-All API routes **must** implement rate limiting. Use a shared middleware or utility:
+The health endpoint is the explicit public exception because it is used by Docker health checks.
 
-```ts
-// src/app/lib/rateLimit.ts
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-
-export const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, '10 s'),
-});
-```
-
-### Route Handler Pattern
+### Route handler shape
 
 ```ts
-// src/app/api/auth/irc-auth/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { ratelimit } from '@/lib/rateLimit';
+import { getRatelimit } from '@/lib/rateLimit';
 import { verifySession } from '@/lib/auth';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+    username: z.string().min(1),
+    password: z.string().min(1),
+});
 
 export async function POST(request: NextRequest) {
-  // Rate limit
-  const { success } = await ratelimit.limit('irc-auth');
-  if (!success) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
+    const { success } = await getRatelimit().limit('login');
+    if (!success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
 
-  // Authentication check
-  const session = await verifySession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    const session = await verifySession();
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  // Handle request
-  const body = await request.json();
-  // ... process ...
+    const parsed = loginSchema.safeParse(await request.json());
+    if (!parsed.success) {
+        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    }
 
-  return NextResponse.json({ /* response */ });
+    return NextResponse.json({ valid: true });
 }
 ```
 
-### Rules
+### API rules
 
-1. **All API routes are POST/GET/PUT/DELETE** as appropriate — no GET for mutations.
-2. **All routes return JSON** with consistent error format: `{ "error": "message" }`.
-3. **All routes are excluded from indexing** via `route.ts` (API routes are not crawlable by default in Next.js, but ensure no `metadata` enables indexing).
-4. **Input validation**: Validate all inputs before processing (use Zod or similar).
-5. **Error handling**: Catch all errors and return appropriate HTTP status codes.
-6. **No secrets in responses**: Never return passwords, tokens, or PII beyond what's necessary.
+1. Use `route.ts` for App Router handlers.
+2. Use the correct HTTP method; never use `GET` for mutations.
+3. Return JSON from API routes.
+4. Use `{ "error": "message" }` for errors and a consistent success shape.
+5. Validate all request bodies, query strings, and path parameters.
+6. Catch expected failures and return an appropriate status code.
+7. Never return passwords, session tokens, database credentials, or unnecessary PII.
+8. Do not use `any` for database rows or request data.
+9. Do not add metadata that enables indexing for API routes.
+10. Keep authentication and rate-limiting in shared utilities instead of duplicating logic.
 
 ---
 
-## Asset Management
+## Assets
 
-### Static Assets
+### No `public/` directory
 
-- **Images, icons, fonts**: Place in `public/` for files referenced by absolute path (e.g., `/img/logo.png`).
-- **Imported assets**: Place in `src/` and import directly (Next.js handles hashing and optimisation).
+The active application has **no root `public/` directory**. Do not create one and do not reference assets with root URLs such as `/img/logo.png`.
 
-### Organising Assets
+All assets live under `src/img/`:
 
-```
-public/
-├── img/
-│   ├── logo/
-│   │   ├── favicon.ico
-│   │   ├── infhub/
-│   │   └── infcraft/
-│   └── misc/
-├── fonts/
-└── ...
+```text
+src/img/
+├── logo/
+│   ├── favicon.ico
+│   ├── infcraft/infcraft_logo.png
+│   └── infhub/infhub_ascii.txt
+└── misc/
+    ├── bnuuyascii.txt
+    └── pixel_art_burger.png
 ```
 
-### Rules
+### Images
 
-1. **No assets in `src/app/`**: Static assets belong in `public/` or `src/` (imported), never in page directories.
-2. **Optimised formats**: Use WebP/AVIF where possible; provide fallbacks.
-3. **SVG icons**: Inline small SVGs as React components; store larger SVGs in `public/`.
-4. **Legacy assets**: `src/legacy/` preserves old asset paths during migration.
+Import images from `src/img/` and pass the imported value to `next/image`:
+
+```tsx
+import infcraftLogo from '@/img/logo/infcraft/infcraft_logo.png';
+import Image from 'next/image';
+
+export function Logo() {
+    return <Image src={infcraftLogo} alt="INFCRAFT" />;
+}
+```
+
+This lets Next.js hash, optimise, and bundle the asset. It also keeps the asset inside the source tree.
+
+### Text and other source assets
+
+For text files that are read by a Server Component, read them from `src/img/` using a typed server-side helper:
+
+```ts
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+export async function readAssetText(relativePath: string): Promise<string> {
+    return readFile(path.join(process.cwd(), 'src', 'img', relativePath), 'utf8');
+}
+```
+
+Do not expose raw text files through a manually configured public URL.
+
+### Asset rules
+
+- Keep all active assets under `src/img/`.
+- Use descriptive filenames and group by purpose.
+- Prefer WebP or AVIF for photographic images where browser support allows it.
+- Use SVG for icons when practical.
+- Do not duplicate an asset in both `src/img/` and `src/legacy/`.
+- Legacy assets remain under `src/legacy/` only as historical references.
+- Ensure `Dockerfile` copies `src/img/` into the Next.js build stage.
+- Do not mount a host source directory over the production image in a way that changes file ownership or bypasses the built asset pipeline.
 
 ---
 
 ## Naming Conventions
 
 | Element | Convention | Example |
-|---------|-----------|---------|
-| Page file | kebab-case, `page.tsx` | `src/app/infcraft/page.tsx` |
-| Component file | PascalCase, `.tsx` | `InfcraftHeader.tsx` |
-| Hook file | camelCase, `use*.ts` | `useAuth.ts` |
-| API route dir | kebab-case, `route.ts` | `src/app/api/auth/irc-auth/route.ts` |
-| CSS module | PascalCase, `.module.css` | `InfcraftHeader.module.css` |
-| Styles dir | lowercase, `styles/` | `src/app/infcraft/styles/` |
-| Utility file | camelCase, `.ts` | `rateLimit.ts` |
-| Type definition | camelCase, `.ts` | `index.ts` |
+|---|---|---|
+| Page | `page.tsx` in the route directory | `src/app/infcraft/page.tsx` |
+| Route handler | `route.ts` | `src/app/api/health/route.ts` |
+| Component | PascalCase `.tsx` | `InfcraftHeader.tsx` |
+| CSS Module | PascalCase beside component, or lowercase in feature `styles/` | `ServerBox.module.css`, `auth.module.css` |
+| Hook | camelCase, `use*` | `useClickableBoxes.ts` |
+| Utility | camelCase `.ts` | `rateLimit.ts` |
+| Shared type | PascalCase export in `src/types/` | `ApiResponse` |
+| Feature directory | lowercase or product name | `infcraft` |
 | Database table | snake_case | `email_verification_tokens` |
-| Environment variable | UPPER_SNAKE_CASE | `DB_HOST`, `LOUNGE_PORT` |
+| Environment variable | UPPER_SNAKE_CASE | `DB_HOST` |
+| Asset directory | lowercase | `src/img/logo/` |
+
+Use kebab-case for route directories and URL segments. Use PascalCase for exported components and types. Do not mix `snake_case`, `kebab-case`, and camelCase within the same kind of file.
 
 ---
 
@@ -405,44 +481,152 @@ public/
 
 ### Convention
 
-- All environment variables are **uppercase with underscores**.
-- `.env.example` documents all required and optional variables.
-- Runtime variables (Next.js) use `NEXT_PUBLIC_` prefix for client-exposed values.
+- Use `UPPER_SNAKE_CASE`.
+- Put secrets in `.env` and never commit that file.
+- Keep secrets server-side.
+- Only expose a value to client code with the `NEXT_PUBLIC_` prefix.
+- Document every required variable in `.env.example`.
+- Validate environment-dependent configuration at the boundary where practical.
 
-### Required Variables
+### Required variables
 
 ```env
-DB_HOST=
-DB_NAME=
-DB_USER=
+DB_HOST=db
+DB_NAME=infhub_database
+DB_USER=infhub_user
 DB_PASSWORD=
-LOUNGE_HOST=
-LOUNGE_PORT=
+DB_ROOT_PASSWORD=
+LOUNGE_HOST=lounge
+LOUNGE_PORT=9000
 SESSION_SECRET=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+NEXT_PUBLIC_URL=http://localhost:8080
 ```
 
 ### Rules
 
-1. **Never commit `.env`** — it is in `.gitignore`.
-2. **All secrets are server-side only**: No `NEXT_PUBLIC_` prefix for secrets.
-3. **Type-safe access**: Use a validated config object (e.g., with Zod) rather than `process.env` directly.
-4. **Docker Compose**: Environment variables are set in `docker-compose.yml` for containerised services.
+1. Use strong, unique secrets in every environment.
+2. Do not put database or Upstash credentials in client components.
+3. Do not commit `.env`.
+4. Keep Compose defaults aligned with `.env.example`.
+5. Treat a missing required variable as a deployment error, not as a reason to silently fall back to production infrastructure.
 
 ---
 
-## Migration Checklist
+## Docker and Permissions
 
-When migrating from legacy PHP/JS to Next.js:
+### Image boundaries
 
-- [ ] Create the page module directory under `src/app/`
-- [ ] Convert HTML to TSX (Server Component by default)
-- [ ] Move CSS to module-scoped styles
-- [ ] Convert JS event handlers to React event handlers
-- [ ] Extract shared logic into custom hooks
-- [ ] Convert API endpoints to route handlers with auth + rate limiting
-- [ ] Add the module to the relevant layout
-- [ ] Update `globals.css` with any new design tokens
-- [ ] Add TypeScript types for all props and data shapes
-- [ ] Test the page at all target viewports
-- [ ] Verify API routes are authenticated and rate-limited
-- [ ] Confirm no API route is indexed (check robots.txt / metadata)
+- The Next.js production target is `nextjs-runtime`.
+- The runtime image contains the built application, dependencies, and `src/img/` assets.
+- The legacy PHP target remains available only for historical reference and is not the active web service.
+- The Compose `web` service must build `nextjs-runtime`, not the intermediate build stage.
+- The `web` service exposes container port `3000`; the host mapping is `8080:3000`.
+
+### Ownership
+
+The runtime image should run as the Node user and own `/app`:
+
+```dockerfile
+RUN chown -R node:node /app
+USER node
+```
+
+This prevents host bind mounts or root-owned build artifacts from becoming unreadable inside the container.
+
+### Source mounts
+
+Do not bind-mount the repository's `src/` over `/app/src/` in the production Compose service. It can:
+
+- Replace built assets with host-owned files
+- Bypass the asset import and optimisation pipeline
+- Introduce inconsistent ownership and permissions
+- Make the running image differ from the image that passed the build
+
+For local source watching, use `npm run dev` directly or a dedicated development Compose profile. Production Compose should run the immutable built image.
+
+### 403 diagnosis
+
+A browser-level `403 Forbidden` from `Server: cloudflare` and an Apache signature is not a Next.js asset error. It means the request is still reaching an old Apache/reverse-proxy origin or an old deployment path.
+
+Check the deployment host in this order:
+
+1. Confirm the new service is running:
+
+   ```bash
+   docker compose ps
+   docker compose logs --tail=100 web
+   ```
+
+2. Test the container directly:
+
+   ```bash
+   curl -i http://127.0.0.1:3000/api/health
+   curl -i http://127.0.0.1:8080/api/health
+   ```
+
+3. Check listeners:
+
+   ```bash
+   ss -ltnp | grep -E ':(80|3000|8080)\\b'
+   ```
+
+4. Confirm the reverse proxy points to the Next.js backend on port `3000` (or host port `8080`, depending on proxy placement).
+5. Confirm Cloudflare origin settings point to the current server and not an old origin.
+6. Check ownership and read permissions on the deployment checkout if a reverse proxy serves files directly.
+
+`robots.txt` can prevent indexing, but it does not normally cause a browser request to receive an Apache 403.
+
+---
+
+## Legacy Migration
+
+Legacy files are preserved under `src/legacy/` for history and comparison. They are not active application code.
+
+### Migration map
+
+| Legacy area | Next.js destination | Migration form |
+|---|---|---|
+| `src/legacy/php/pages/` | `src/app/[feature]/page.tsx` | Server Component |
+| `src/legacy/php/templates/` | `src/app/components/` or feature `components/` | Reusable component |
+| `src/legacy/php/api/` | `src/app/api/` | Authenticated route handler |
+| `src/legacy/css/` | CSS Modules in the matching module | Scoped styles |
+| `src/legacy/js/` | Client component or `hooks/` | Typed React behaviour |
+| `src/legacy/index.php` | No active replacement | Historical reference only |
+
+### Migration checklist
+
+- [ ] Create the route module under `src/app/`.
+- [ ] Convert PHP/HTML to TSX.
+- [ ] Move presentation styles to a CSS Module.
+- [ ] Convert JavaScript event handlers to React handlers or a typed hook.
+- [ ] Move shared server logic to `src/lib/` or feature `lib/`.
+- [ ] Convert API endpoints to `route.ts` handlers with authentication and rate limiting.
+- [ ] Move assets to `src/img/` and import or read them from there.
+- [ ] Add TypeScript types for props, API payloads, and database rows.
+- [ ] Remove all active references to `src/legacy/`.
+- [ ] Test desktop and mobile viewports.
+- [ ] Verify API routes are authenticated, rate-limited, and not indexed.
+
+---
+
+## Review Checklist
+
+Before merging a page or feature:
+
+- [ ] The route is represented by the correct `page.tsx` or `route.ts`.
+- [ ] The page is organised as a module with co-located concerns.
+- [ ] Server and client boundaries are intentional and minimal.
+- [ ] All props and external data are typed.
+- [ ] No new `any` types were introduced.
+- [ ] Styles are scoped to a CSS Module or feature style directory.
+- [ ] No active code references `public/`.
+- [ ] All active assets are under `src/img/`.
+- [ ] Legacy code is only referenced for migration context.
+- [ ] API routes are authenticated and rate-limited unless explicitly public.
+- [ ] API errors use the standard JSON shape.
+- [ ] Metadata and robots settings do not enable indexing for APIs.
+- [ ] The Docker runtime target is `nextjs-runtime`.
+- [ ] The production container runs as a non-root user with readable assets.
+- [ ] The reverse proxy points to the current Next.js service.

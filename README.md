@@ -27,7 +27,7 @@ This Docker Compose stack manages four services:
 
 | Service     | Description                          | Port (host) | Internal Port |
 |-------------|--------------------------------------|-------------|---------------|
-| `web`       | Next.js 15 web application           | 3000        | 3000          |
+| `web`       | Next.js 15 web application           | 8080        | 3000          |
 | `db`        | MariaDB 11 (database)                | — (internal)| 3306          |
 | `inspircd`  | InspIRCd 4.x IRC server              | 6667, 6697  | 6667, 6697    |
 | `lounge`    | The Lounge IRC web client            | 9000        | 9000          |
@@ -69,20 +69,19 @@ project-root/
 │   │   │   └── ServerBox.tsx
 │   │   ├── hooks/                  # Shared hooks
 │   │   │   └── useClickableBoxes.ts
-│   │   ├── lib/                    # Shared utilities
-│   │   │   ├── auth.ts
-│   │   │   ├── db.ts
-│   │   │   └── rateLimit.ts
-│   │   └── types/                  # TypeScript types
-│   │       └── index.ts
+│   ├── lib/                        # Shared server utilities
+│   │   ├── auth.ts
+│   │   ├── db.ts
+│   │   └── rateLimit.ts
+│   ├── types/                      # Shared TypeScript types
+│   │   └── index.ts
 │   ├── database/
 │   │   └── schema.sql
-│   ├── img/                        # Static assets
-│   └── legacy/                     # Legacy PHP code (phased out)
+│   ├── img/                        # All active static assets
+│   └── legacy/                     # Preserved legacy implementation
 │       ├── php/
 │       ├── css/
 │       └── js/
-├── public/                         # Static files served at root
 ├── next.config.js
 ├── tsconfig.json
 ├── docker-compose.yml

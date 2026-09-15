@@ -355,7 +355,7 @@ step "Waiting for services..."
 
 sleep 3
 
-services="db inspircd lounge php-app"
+services="web db inspircd lounge"
 failed=false
 
 for service in $services; do

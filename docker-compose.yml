@@ -22,16 +22,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: nextjs
+      target: nextjs-runtime
     container_name: infhub-website
     ports:
-      - "3000:3000"
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-      - ./next.config.js:/app/next.config.js
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./next-env.d.ts:/app/next-env.d.ts
+      - "8080:3000"
     restart: always
     depends_on:
       db:
@@ -45,7 +39,9 @@ services:
       LOUNGE_HOST: lounge
       LOUNGE_PORT: 9000
       SESSION_SECRET: ${SESSION_SECRET}
-      NEXT_PUBLIC_URL: http://localhost:3000
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
+      NEXT_PUBLIC_URL: http://localhost:8080
     networks:
       - infhub-network
 

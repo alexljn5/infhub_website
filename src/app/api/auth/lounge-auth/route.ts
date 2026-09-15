@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ratelimit } from '@/app/lib/rateLimit';
-import { verifySession } from '@/app/lib/auth';
+import { getRatelimit } from '@/lib/rateLimit';
+import { verifySession } from '@/lib/auth';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -10,7 +10,7 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
     // Rate limit
-    const { success } = await ratelimit.limit('lounge-auth');
+    const { success } = await getRatelimit().limit('lounge-auth');
     if (!success) {
         return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

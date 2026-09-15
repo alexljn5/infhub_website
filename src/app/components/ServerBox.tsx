@@ -1,12 +1,13 @@
 'use client';
 
+import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
 import styles from './ServerBox.module.css';
 
 interface ServerBoxProps {
     id: string;
     name: string;
-    imageSrc: string;
+    imageSrc: StaticImageData;
     imageAlt: string;
     href: string;
 }
@@ -14,7 +15,7 @@ interface ServerBoxProps {
 export function ServerBox({ id, name, imageSrc, imageAlt, href }: ServerBoxProps) {
     return (
         <Link href={href} className={`${styles.serverBox} ${styles[id] || ''}`} data-server={id}>
-            <img src={imageSrc} alt={imageAlt} className={styles.serverImage} />
+            <Image src={imageSrc} alt={imageAlt} className={styles.serverImage} />
             <p>{name}</p>
         </Link>
     );

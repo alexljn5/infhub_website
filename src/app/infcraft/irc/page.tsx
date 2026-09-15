@@ -1,20 +1,16 @@
-import { headers } from 'next/headers';
+import styles from '../styles/infcraft.module.css';
 
-export default async function InfcraftIrcPage() {
-    const headersList = await headers();
-    const protocol = headersList.get('x-forwarded-proto') || 'https';
-    const host = headersList.get('host') || 'localhost:3000';
-
-    // Use The Lounge URL (falls back to irc.infhub.org for local dev)
+export default function InfcraftIrcPage() {
+    // Use The Lounge service inside Compose, with a public fallback for local use.
     const loungeHost = process.env.LOUNGE_HOST || 'irc.infhub.org';
     const loungePort = process.env.LOUNGE_PORT || '443';
     const loungeUrl = `https://${loungeHost}:${loungePort}`;
 
     return (
-        <div style={{ width: '100%', height: '800px' }}>
+        <div className={styles.ircFrameWrapper}>
             <iframe
+                className={styles.ircFrame}
                 src={loungeUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
                 title="INFHUB IRC Chat"
             />
         </div>

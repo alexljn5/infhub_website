@@ -3,7 +3,7 @@
 # INFHUB Homelab — Stop Script
 # ============================================================
 # Stops the complete INFHUB Docker Compose stack:
-#   - php-app: Apache + PHP 8.4 website
+#   - web: Next.js website
 #   - db: MariaDB 11
 #   - inspircd: InspIRCd 4.x IRC server
 #   - lounge: The Lounge IRC web client
@@ -93,7 +93,7 @@ running=$(docker compose -f "$COMPOSE_FILE" ps --format json 2>/dev/null || echo
 if [[ -z "$running" || "$running" == "[]" ]]; then
     info "No INFHUB containers are currently running via Compose."
     # Check for orphaned containers
-    for container in infhub_lounge infhub-website-php-app-1 infhub-website-db-1 infhub-website-inspircd-1; do
+    for container in infhub_lounge infhub-website infhub-website-db-1 infhub-website-inspircd-1; do
         if docker inspect "$container" &>/dev/null 2>&1; then
             info "Found orphaned container: $container"
         fi
