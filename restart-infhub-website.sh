@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # ============================================================
 # INFHUB Homelab — Safe Restart Wrapper
 # ============================================================
@@ -7,12 +7,25 @@
 # checked before the Next.js container starts.
 #
 # Usage:
-#   bash restart-infhub-website.sh
-#   bash restart-infhub-website.sh --yes
-#   bash restart-infhub-website.sh --skip-healthcheck
+#   sh restart-infhub-website.sh
+#   sh restart-infhub-website.sh --yes
+#   sh restart-infhub-website.sh --skip-healthcheck
 # ============================================================
 
-set -Eeuo pipefail
+printf '\033[1;31m'
+cat <<'ASCII'
+  _     <-. (`-')_            (`-').->           <-.(`-')
+ (_)       \( OO) )  <-.      (OO )__      .->    __( OO)
+ ,-(`-'),--./ ,--/(`-')-----.,--. ,'-',--.(,--.  '-'---.\
+ | ( OO)|   \ |  |(OO|(_\---'|  | |  ||  | |(`-')| .-. (/
+ |  |  )|  . '|  |)/ |  '--. |  `-'  ||  | |(OO )| '-' `.)
+(|  |_/ |  |\    | \_)  .--' |  .-.  ||  | | |  \| /`'.  |
+ |  |'->|  | \   |  `|  |_)  |  | |  |\  '-'(_ .'| '--'  /
+ `--'   `--'  `--'   `--'    `--' `--' `-----'   `------'
+ASCII
+printf '\033[0m\n'
+
+set -eu
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
