@@ -66,7 +66,7 @@ project-root/
 │   ├── lib/                        # Shared utilities & helpers
 │   │   ├── db.ts                   # Database connection
 │   │   ├── auth.ts                 # Auth utilities
-│   │   └── api.ts                  # API client helpers
+│   │   └── rateLimit.ts            # Rate limiting utility
 │   ├── types/                      # TypeScript type definitions
 │   │   └── index.ts
 │   ├── database/
@@ -266,8 +266,8 @@ Define in `globals.css`:
 | Page scripts | Page component itself | `src/app/page.tsx` |
 | Client hooks | `hooks/` in feature dir | `src/app/infcraft/hooks/useAuth.ts` |
 | Shared hooks | `src/app/hooks/` | `src/app/hooks/useClickOutside.ts` |
-| Utilities | `src/lib/` | `src/lib/api.ts` |
-| Types | `src/types/` | `src/types/index.ts` |
+| Utilities | `src/app/lib/` | `src/app/lib/api.ts` |
+| Types | `src/app/types/` | `src/app/types/index.ts` |
 
 ### Rules
 
@@ -304,7 +304,7 @@ All API routes **must** be authenticated unless explicitly documented as public 
 All API routes **must** implement rate limiting. Use a shared middleware or utility:
 
 ```ts
-// src/lib/rateLimit.ts
+// src/app/lib/rateLimit.ts
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
