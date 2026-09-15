@@ -341,6 +341,31 @@ If InspIRCd is restarting and TheLounge is unhealthy:
 - The startup script will warn (not exit) on InspIRCd/Lounge failures so you can still access the web app and Caddy
 - After fixing InspIRCd, rebuild with `docker compose build inspircd`
 
+### InspIRCd Container Restart Loop (Fixed)
+
+If `infhub-website-inspircd` shows `Restarting (0)` in `docker ps`:
+
+**Root cause**: The Dockerfile CMD `["/home/inspircd/inspircd/inspircd", "start"]` runs InspIRCd in daemon mode. The daemon forks to background, causing PID 1 to exit with code 0. Docker's `restart: always` policy then restarts the container in a loop.
+
+**Fix applied**: The `docker-compose.yml` inspircd service now uses an explicit `command` that runs InspIRCd in foreground mode:
+
+```yaml
+command:
+  - /home/inspircd/inspircd/bin/inspircd
+  - --nofork
+  - --nopid
+```
+
+This matches the installed InspIRCd service definition (`ExecStart=/home/inspircd/inspircd/bin/inspircd --nofork --nopid`, `Type=simple`). PID 1 stays alive, Docker does not restart the container.
+
+**Before**: `CMD ["/home/inspircd/inspircd/inspircd", "start"]` — daemonizes, PID 1 exits, container restarts
+**After**: `command: [/home/inspircd/inspircd/bin/inspircd, --nofork, --nopid]` — foreground process, PID 1 stays alive
+
+To recreate after this fix:
+```bash
+docker compose up -d --force-recreate inspircd
+```
+
 ## Development Docker Setup
 
 For local development in a Docker container:

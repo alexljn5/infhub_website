@@ -78,6 +78,13 @@ services:
       target: inspircd
     container_name: infhub-website-inspircd
     restart: always
+    # Run InspIRCd in foreground (no fork) so PID 1 stays alive.
+    # The wrapper "inspircd start" daemonizes, causing Docker to
+    # restart the container in a loop (exit code 0).
+    command:
+      - /home/inspircd/inspircd/bin/inspircd
+      - --nofork
+      - --nopid
     ports:
       - "6667:6667"
       - "6697:6697"
