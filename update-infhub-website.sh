@@ -1,61 +1,91 @@
-#!/bin/sh
-
+#!/usr/bin/env bash
 # ============================================================
-# INFHUB Homelab — Update Script
+# INFHUB Homelab — Hardened Update Script
+# ============================================================
+# Safely updates the Docker Compose stack while preventing the
+# old PHP container from stealing the Next.js host port.
+#
+# Usage:
+#   bash update-infhub-website.sh              # Interactive update
+#   bash update-infhub-website.sh --yes        # Non-interactive update
+#   bash update-infhub-website.sh --restart-only --yes
+#   bash update-infhub-website.sh --check-only
+#   bash update-infhub-website.sh --help
 # ============================================================
 
-set -eu
+set -Eeuo pipefail
 
-# ------------------------------------------------------------
-# Paths
-# ------------------------------------------------------------
-
-SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 ENV_FILE="$SCRIPT_DIR/.env"
 BACKUP_DIR="$SCRIPT_DIR/backups"
-
-cd "$SCRIPT_DIR"
-
-# ------------------------------------------------------------
-# Flags
-# ------------------------------------------------------------
+WEB_HOST_PORT="8080"
+LEGACY_SERVICE="php-app"
+LEGACY_CONTAINER_PREFIX="infhub-website-php-app"
+SERVICES=(web db inspircd lounge)
 
 AUTO_YES=false
+RESTART_ONLY=false
+SKIP_BACKUP=false
+CHECK_ONLY=false
+SKIP_HEALTHCHECK=false
+TIMEOUT_SECONDS=120
+
+usage() {
+    cat <<EOF
+Usage: $0 [OPTIONS]
+
+Safely update or restart the INFHUB Docker Compose stack.
+
+Options:
+  --yes              Non-interactive mode; accept safe defaults
+  --restart-only     Restart existing images without pulling or rebuilding
+  --skip-backup      Do not offer a MariaDB backup before updating
+  --check-only       Validate Compose and port ownership without changing containers
+  --skip-healthcheck Skip service health verification after startup
+  --timeout SECONDS  Health-check timeout (default: 120)
+  -h, --help         Show this help
+
+Safety guarantees:
+  - The active web service is Next.js on host port $WEB_HOST_PORT.
+  - Known legacy PHP containers are removed before the new web container starts.
+  - An unknown process/container owning port $WEB_HOST_PORT is never removed or replaced.
+  - Persistent volumes and data are preserved.
+EOF
+}
 
 for arg in "$@"; do
     case "$arg" in
         --yes)
             AUTO_YES=true
             ;;
-
+        --restart-only)
+            RESTART_ONLY=true
+            ;;
+        --skip-backup)
+            SKIP_BACKUP=true
+            ;;
+        --check-only)
+            CHECK_ONLY=true
+            ;;
+        --skip-healthcheck)
+            SKIP_HEALTHCHECK=true
+            ;;
+        --timeout)
+            shift
+            if [[ -z "${1:-}" || ! "$1" =~ ^[0-9]+$ ]]; then
+                echo "[ERR] --timeout requires a positive integer" >&2
+                exit 1
+            fi
+            TIMEOUT_SECONDS="$1"
+            ;;
         -h|--help)
-            cat <<EOF
-Usage: $0 [OPTIONS]
-
-Update the complete INFHUB Docker Compose stack.
-
-Options:
-  --yes       Non-interactive mode
-  -h, --help  Show this help
-
-The update performs:
-  1. Docker/Compose preflight checks
-  2. Optional MariaDB backup
-  3. Docker image pull
-  4. Docker Compose rebuild
-  5. Container restart
-  6. Service health verification
-
-Persistent Docker volumes and IRC/The Lounge configuration
-are never deliberately removed by this script.
-EOF
+            usage
             exit 0
             ;;
-
         *)
-            echo "[ERR] Unknown argument: $arg"
-            echo "Run '$0 --help' for usage."
+            echo "[ERR] Unknown argument: $arg" >&2
+            echo "Run '$0 --help' for usage." >&2
             exit 1
             ;;
     esac
@@ -85,35 +115,22 @@ info() {
     printf '  \033[1;37m[INFO]\033[0m %s\n' "$1"
 }
 
-# ------------------------------------------------------------
-# Prompt helper
-#
-# IMPORTANT:
-# Prompt goes to stderr because the function's stdout is captured
-# by response=$(ask ...). Only Y/N is allowed onto stdout.
-# ------------------------------------------------------------
-
 ask() {
-    prompt="$1"
-    default="${2:-Y}"
+    local prompt="$1"
+    local default="${2:-Y}"
+    local response
 
-    if [ "$default" = "Y" ]; then
-        display_default="[Y/n] (default: Y)"
-    else
-        display_default="[y/N] (default: N)"
-    fi
-
-    if [ "$AUTO_YES" = true ]; then
-        if [ "$default" = "Y" ]; then
-            printf '%s\n' "Y"
-        else
-            printf '%s\n' "N"
-        fi
+    if [[ "$AUTO_YES" == true ]]; then
+        printf '%s\n' "$default"
         return 0
     fi
 
     while true; do
-        printf '%s %s ' "$prompt" "$display_default" >&2
+        if [[ "$default" == "Y" ]]; then
+            printf '%s [Y/n] (default: Y) ' "$prompt" >&2
+        else
+            printf '%s [y/N] (default: N) ' "$prompt" >&2
+        fi
 
         if ! IFS= read -r response; then
             printf '\n' >&2
@@ -125,57 +142,54 @@ ask() {
                 printf '%s\n' "Y"
                 return 0
                 ;;
-
             n|N|no|NO|No)
                 printf '%s\n' "N"
                 return 0
                 ;;
-
             "")
                 printf '%s\n' "$default"
                 return 0
                 ;;
-
             *)
-                printf '%s\n' "Please answer Y or N." >&2
+                printf 'Please answer Y or N.\n' >&2
                 ;;
         esac
     done
 }
 
 # ------------------------------------------------------------
-# Preflight
+# Compose wrapper and preflight
 # ------------------------------------------------------------
 
-step "=== INFHUB Homelab Update ==="
+compose() {
+    docker compose -f "$COMPOSE_FILE" "$@"
+}
 
-if ! command -v docker >/dev/null 2>&1; then
-    err "Docker is not installed or not available in PATH."
-    exit 1
-fi
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        err "Required command is not available: $1"
+        exit 1
+    fi
+}
+
+step "=== INFHUB Homelab Update ==="
+info "Project directory: $SCRIPT_DIR"
+
+require_command docker
+require_command grep
 
 if ! docker compose version >/dev/null 2>&1; then
     err "Docker Compose plugin is not available."
     exit 1
 fi
 
-if [ ! -f "$COMPOSE_FILE" ]; then
-    err "docker-compose.yml not found:"
-    echo "  $COMPOSE_FILE"
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+    err "docker-compose.yml not found: $COMPOSE_FILE"
     exit 1
 fi
 
-ok "Docker available"
-ok "Docker Compose available"
-ok "Compose file found"
-
-# ------------------------------------------------------------
-# Validate Compose
-# ------------------------------------------------------------
-
 step "Validating Docker Compose configuration..."
-
-if docker compose -f "$COMPOSE_FILE" config --quiet; then
+if compose config --quiet; then
     ok "Docker Compose configuration is valid"
 else
     err "Docker Compose configuration is invalid."
@@ -183,314 +197,264 @@ else
 fi
 
 # ------------------------------------------------------------
-# Database backup
+# Legacy container cleanup
 # ------------------------------------------------------------
 
-step "Database backup"
+container_is_legacy_web() {
+    local container_id="$1"
+    local service=""
+    local name=""
+    local image=""
 
-response=$(ask "  Create a database backup before updating?" "Y")
+    service="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' "$container_id" 2>/dev/null || true)"
+    name="$(docker inspect --format '{{.Name}}' "$container_id" 2>/dev/null || true)"
+    name="${name#/}"
+    image="$(docker inspect --format '{{.Config.Image}}' "$container_id" 2>/dev/null || true)"
 
-if [ "$response" = "N" ]; then
+    [[ "$service" == "$LEGACY_SERVICE" ]] && return 0
+    [[ "$name" == "$LEGACY_CONTAINER_PREFIX"* && "$image" == *php* ]] && return 0
+    return 1
+}
 
-    info "Skipping database backup"
+remove_legacy_web_containers() {
+    local container_id=""
+    local legacy_name=""
+    local removed=0
 
-else
+    while IFS= read -r container_id; do
+        [[ -z "$container_id" ]] && continue
 
-    mkdir -p "$BACKUP_DIR"
+        if container_is_legacy_web "$container_id"; then
+            legacy_name="$(docker inspect --format '{{.Name}}' "$container_id" 2>/dev/null || true)"
+            legacy_name="${legacy_name#/}"
+            warn "Removing orphaned legacy web container: $legacy_name"
+            docker rm -f "$container_id" >/dev/null
+            removed=$((removed + 1))
+        fi
+    done < <(docker ps -aq 2>/dev/null || true)
 
-    backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
-    db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
-
-    if [ ! -f "$ENV_FILE" ]; then
-
-        warn ".env not found; cannot determine DB root password."
-        info "Skipping database backup."
-
+    if [[ "$removed" -gt 0 ]]; then
+        ok "Removed $removed orphaned legacy web container(s)"
     else
+        info "No orphaned legacy web container found"
+    fi
+}
 
-        DB_ROOT_PASS="$(
-            grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" \
-                | head -n1 \
-                | cut -d'=' -f2-
-        )"
+stop_current_web_container() {
+    local web_id=""
 
-        if [ -z "$DB_ROOT_PASS" ]; then
+    web_id="$(compose ps -q web 2>/dev/null || true)"
+    if [[ -n "$web_id" ]]; then
+        info "Stopping the current Next.js web container before rebinding port $WEB_HOST_PORT"
+        compose stop web >/dev/null 2>&1 || true
+    fi
+}
 
-            warn "DB_ROOT_PASSWORD is not defined in .env."
-            info "Skipping database backup."
+assert_port_is_free() {
+    local owner=""
+    local listener=""
 
-        else
+    owner="$(docker ps --format '{{.Names}}|{{.Ports}}' 2>/dev/null | grep -E "(${WEB_HOST_PORT}->|:${WEB_HOST_PORT}/tcp)" || true)"
 
-            # Check whether the db service currently has a running
-            # container.
-            DB_CONTAINER="$(
-                docker compose \
-                    -f "$COMPOSE_FILE" \
-                    ps -q db 2>/dev/null || true
-            )"
+    if [[ -n "$owner" ]]; then
+        err "Host port $WEB_HOST_PORT is still occupied by a Docker container:"
+        printf '    %s\n' "$owner"
+        err "Refusing to start a replacement container while another owner holds the port."
+        exit 1
+    fi
 
-            if [ -z "$DB_CONTAINER" ]; then
+    if command -v ss >/dev/null 2>&1; then
+        listener="$(ss -ltnp 2>/dev/null | grep -E ":${WEB_HOST_PORT}\\b" || true)"
+        if [[ -n "$listener" ]]; then
+            err "Host port $WEB_HOST_PORT is still occupied by a host process:"
+            printf '    %s\n' "$listener"
+            err "Stop the owning process or container before retrying."
+            exit 1
+        fi
+    fi
 
-                warn "MariaDB container does not currently exist."
-                info "Skipping database backup."
+    ok "Host port $WEB_HOST_PORT is free"
+}
 
-            else
+if [[ "$CHECK_ONLY" == true ]]; then
+    step "Running read-only safety check..."
+    assert_port_is_free
+    ok "Configuration and port ownership checks passed"
+    exit 0
+fi
 
-                DB_STATUS="$(
-                    docker inspect \
-                        --format '{{.State.Status}}' \
-                        "$DB_CONTAINER" \
-                        2>/dev/null || true
-                )"
+# ------------------------------------------------------------
+# Database backup (optional)
+# ------------------------------------------------------------
 
-                if [ "$DB_STATUS" != "running" ]; then
+if [[ "$RESTART_ONLY" != true && "$SKIP_BACKUP" != true ]]; then
+    step "Database backup"
+    response="$(ask "Create a MariaDB backup before updating?" "Y")"
 
-                    warn "MariaDB container is not running."
-                    info "Skipping database backup."
+    if [[ "$response" != "N" && -f "$ENV_FILE" ]]; then
+        DB_ROOT_PASS="$(grep '^DB_ROOT_PASSWORD=' "$ENV_FILE" | head -n1 | cut -d'=' -f2- || true)"
+        DB_CONTAINER="$(compose ps -q db 2>/dev/null || true)"
 
+        if [[ -n "$DB_ROOT_PASS" && -n "$DB_CONTAINER" ]]; then
+            DB_STATUS="$(docker inspect --format '{{.State.Status}}' "$DB_CONTAINER" 2>/dev/null || true)"
+            if [[ "$DB_STATUS" == "running" ]]; then
+                mkdir -p "$BACKUP_DIR"
+                backup_ts="$(date '+%Y-%m-%d_%H%M%S')"
+                db_backup="$BACKUP_DIR/database-backup-$backup_ts.sql"
+
+                info "Creating MariaDB backup..."
+                info "Output: $db_backup"
+                if compose exec -T -e MYSQL_PWD="$DB_ROOT_PASS" db mariadb-dump -u root infhub_database > "$db_backup" && [[ -s "$db_backup" ]]; then
+                    ok "Database backup created"
                 else
-
-                    info "Creating MariaDB backup..."
-                    info "Output: $db_backup"
-
-                    if docker compose \
-                        -f "$COMPOSE_FILE" \
-                        exec -T \
-                        -e MYSQL_PWD="$DB_ROOT_PASS" \
-                        db \
-                        mariadb-dump \
-                        -u root \
-                        infhub_database \
-                        > "$db_backup"; then
-
-                        if [ -s "$db_backup" ]; then
-                            ok "Database backup created"
-                            echo "    $db_backup"
-                        else
-                            warn "Backup file is empty."
-                            rm -f "$db_backup"
-                        fi
-
-                    else
-
-                        warn "Database backup command failed."
-                        rm -f "$db_backup"
-
-                    fi
+                    warn "Database backup failed or was empty."
+                    rm -f "$db_backup"
                 fi
+            else
+                warn "MariaDB is not running; skipping backup."
+            fi
+        else
+            warn "MariaDB backup prerequisites are missing; skipping backup."
+        fi
+    else
+        info "Skipping database backup"
+    fi
+fi
+
+# ------------------------------------------------------------
+# Pull images (update mode only)
+# ------------------------------------------------------------
+
+if [[ "$RESTART_ONLY" != true ]]; then
+    step "Pulling external Docker images..."
+    response="$(ask "Pull latest external images?" "Y")"
+    if [[ "$response" != "N" ]]; then
+        compose pull db lounge >/dev/null || warn "Image pull failed; continuing with locally available images."
+        ok "External image pull attempted"
+    else
+        info "Skipping image pull"
+    fi
+fi
+
+# ------------------------------------------------------------
+# Safe startup
+# ------------------------------------------------------------
+
+step "Preparing safe web-service startup..."
+remove_legacy_web_containers
+stop_current_web_container
+assert_port_is_free
+
+if [[ "$RESTART_ONLY" == true ]]; then
+    step "Restarting existing stack..."
+    compose up -d --remove-orphans
+    ok "Stack restarted without rebuilding"
+else
+    step "Building and starting stack..."
+    response="$(ask "Rebuild images and restart?" "Y")"
+    if [[ "$response" == "N" ]]; then
+        compose up -d --remove-orphans
+        ok "Stack started without rebuilding"
+    else
+        compose up -d --build --remove-orphans
+        ok "Stack rebuilt and started"
+    fi
+fi
+
+# ------------------------------------------------------------
+# Health verification
+# ------------------------------------------------------------
+
+wait_for_service() {
+    local service="$1"
+    local deadline=$((SECONDS + TIMEOUT_SECONDS))
+    local container_id=""
+    local status=""
+    local health=""
+
+    while (( SECONDS < deadline )); do
+        container_id="$(compose ps -q "$service" 2>/dev/null || true)"
+
+        if [[ -n "$container_id" ]]; then
+            status="$(docker inspect --format '{{.State.Status}}' "$container_id" 2>/dev/null || true)"
+
+            if [[ "$status" == "exited" || "$status" == "dead" ]]; then
+                err "$service is not running (status: $status)"
+                return 1
+            fi
+
+            if [[ "$status" == "running" ]]; then
+                health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null || echo unknown)"
+
+                case "$health" in
+                    healthy)
+                        ok "$service is healthy"
+                        return 0
+                        ;;
+                    none)
+                        ok "$service is running without a healthcheck"
+                        return 0
+                        ;;
+                    unhealthy)
+                        err "$service reports unhealthy"
+                        return 1
+                        ;;
+                    *)
+                        sleep 2
+                        ;;
+                esac
             fi
         fi
-    fi
-fi
 
-# ------------------------------------------------------------
-# Pull images
-# ------------------------------------------------------------
-
-step "Pulling latest Docker images..."
-
-response=$(ask "  Pull latest images (docker compose pull)?" "Y")
-
-if [ "$response" = "N" ]; then
-
-    info "Skipping image pull"
-
-else
-
-    docker compose \
-        -f "$COMPOSE_FILE" \
-        pull
-
-    ok "Docker images pulled"
-
-fi
-
-# ------------------------------------------------------------
-# Rebuild and restart
-# ------------------------------------------------------------
-
-step "Rebuilding and restarting the stack..."
-
-response=$(ask \
-    "  Rebuild images and restart (docker compose up -d --build)?" \
-    "Y"
-)
-
-if [ "$response" = "N" ]; then
-
-    response=$(ask \
-        "  Restart without rebuilding (docker compose up -d)?" \
-        "Y"
-    )
-
-    if [ "$response" = "N" ]; then
-
-        info "Skipping restart"
-
-    else
-
-        docker compose \
-            -f "$COMPOSE_FILE" \
-            up -d
-
-        ok "Stack started"
-
-    fi
-
-else
-
-    docker compose \
-        -f "$COMPOSE_FILE" \
-        up -d --build
-
-    ok "Stack rebuilt and started"
-
-fi
-
-# ------------------------------------------------------------
-# Wait for services
-# ------------------------------------------------------------
-
-step "Waiting for services..."
-
-sleep 3
-
-services="web db inspircd lounge"
-failed=false
-
-for service in $services; do
-
-    info "Checking $service..."
-
-    healthy=false
-    i=1
-
-    while [ "$i" -le 60 ]; do
-
-        container_id="$(
-            docker compose \
-                -f "$COMPOSE_FILE" \
-                ps -q "$service" 2>/dev/null || true
-        )"
-
-        if [ -z "$container_id" ]; then
-            sleep 2
-            i=$((i + 1))
-            continue
-        fi
-
-        status="$(
-            docker inspect \
-                --format '{{.State.Status}}' \
-                "$container_id" \
-                2>/dev/null || true
-        )"
-
-        if [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
-            warn "$service is not running (status: $status)"
-            failed=true
-            break
-        fi
-
-        if [ "$status" != "running" ]; then
-            sleep 2
-            i=$((i + 1))
-            continue
-        fi
-
-        health="$(
-            docker inspect \
-                --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
-                "$container_id" \
-                2>/dev/null || echo "unknown"
-        )"
-
-        case "$health" in
-
-            healthy)
-                ok "$service healthy"
-                healthy=true
-                break
-                ;;
-
-            none)
-                ok "$service running (no healthcheck)"
-                healthy=true
-                break
-                ;;
-
-            unhealthy)
-                warn "$service reports unhealthy"
-                failed=true
-                break
-                ;;
-
-            starting|unknown)
-                sleep 2
-                i=$((i + 1))
-                ;;
-
-            *)
-                sleep 2
-                i=$((i + 1))
-                ;;
-        esac
-
+        sleep 2
     done
 
-    if [ "$healthy" != true ] && [ "$failed" != true ]; then
-        warn "$service did not become ready within 120 seconds"
-        failed=true
+    err "$service did not become ready within ${TIMEOUT_SECONDS}s"
+    return 1
+}
+
+if [[ "$SKIP_HEALTHCHECK" != true ]]; then
+    step "Verifying service health..."
+    failed=false
+
+    for service in "${SERVICES[@]}"; do
+        if ! wait_for_service "$service"; then
+            failed=true
+        fi
+    done
+
+    if [[ "$failed" == true ]]; then
+        step "Diagnostics"
+        compose ps || true
+        echo
+        err "One or more services failed health verification."
+        echo "Useful commands:"
+        echo "  docker compose -f \"$COMPOSE_FILE\" logs --tail=100 web"
+        echo "  docker compose -f \"$COMPOSE_FILE\" logs --tail=100 inspircd"
+        echo "  docker compose -f \"$COMPOSE_FILE\" logs --tail=100 lounge"
+        exit 1
     fi
-
-done
-
-# ------------------------------------------------------------
-# Final verification
-# ------------------------------------------------------------
-
-step "Verifying stack..."
-
-docker compose \
-    -f "$COMPOSE_FILE" \
-    ps
-
-echo
-
-if [ "$failed" = true ]; then
-
-    warn "One or more services failed health verification."
-
-    echo
-    echo "Useful diagnostics:"
-    echo "  docker compose -f \"$COMPOSE_FILE\" ps"
-    echo "  docker compose -f \"$COMPOSE_FILE\" logs --tail=100"
-    echo "  docker compose -f \"$COMPOSE_FILE\" logs inspircd"
-    echo "  docker compose -f \"$COMPOSE_FILE\" logs lounge"
-
-    exit 1
+else
+    warn "Skipping service health verification"
 fi
-
-ok "All services passed verification"
 
 # ------------------------------------------------------------
 # Complete
 # ------------------------------------------------------------
 
-step "=== Update Complete ==="
+step "Verifying stack..."
+compose ps
 
+step "=== Update Complete ==="
 echo
 echo "  Services:"
-echo "    Web Application    http://localhost:8080"
+echo "    Web Application    http://localhost:$WEB_HOST_PORT"
 echo "    The Lounge IRC     http://localhost:9000"
 echo "    InspIRCd Plain     irc://localhost:6667"
 echo "    InspIRCd TLS       irc://localhost:6697"
 echo
 echo "  Project:"
 echo "    $SCRIPT_DIR"
-echo
-echo "  Backups:"
-echo "    $BACKUP_DIR"
 echo
 echo "  Persistent data was not removed."
 echo

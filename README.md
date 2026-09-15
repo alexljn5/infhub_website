@@ -123,7 +123,19 @@ npm start
 |------------------------------|--------------------------------------------------|
 | `start-infhub-website.sh`    | Start the full stack (website, db, IRC, lounge)  |
 | `stop-infhub-website.sh`     | Stop the full stack (data preserved)             |
-| `update-infhub-website.sh`   | Pull images, rebuild, restart (data preserved)   |
+| `update-infhub-website.sh`   | Safe update with orphan cleanup and port checks  |
+| `restart-infhub-website.sh`  | Safe restart without pulling or rebuilding       |
+
+For routine recovery, use:
+
+```bash
+bash restart-infhub-website.sh
+```
+
+The restart flow stops the current Next.js container, removes only verified
+legacy `php-app` containers, refuses to overwrite an unknown owner of port
+`8080`, and then starts the Compose services with health verification. For an
+update, use `bash update-infhub-website.sh --yes`.
 
 ## How TheLounge Connects to InspIRCd
 

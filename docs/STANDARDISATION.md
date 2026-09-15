@@ -535,6 +535,23 @@ USER node
 
 This prevents host bind mounts or root-owned build artifacts from becoming unreadable inside the container.
 
+### Safe management scripts
+
+Use [`update-infhub-website.sh`](../update-infhub-website.sh) for updates and
+[`restart-infhub-website.sh`](../restart-infhub-website.sh) for routine restarts.
+Both scripts:
+
+- resolve the project directory dynamically
+- validate the Compose file before changing containers
+- remove only verified legacy `php-app` containers
+- stop the current Next.js container before rebinding port `8080`
+- refuse to replace an unknown port owner
+- preserve persistent volumes
+- verify service health after startup
+
+The restart wrapper runs the update script in restart-only mode and is the
+preferred plug-and-play recovery command.
+
 ### Source mounts
 
 Do not bind-mount the repository's `src/` over `/app/src/` in the production Compose service. It can:

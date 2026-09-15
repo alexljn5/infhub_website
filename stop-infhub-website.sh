@@ -114,7 +114,7 @@ fi
 
 # --- Stop ---
 step "Stopping containers..."
-docker compose -f "$COMPOSE_FILE" down
+docker compose -f "$COMPOSE_FILE" down --remove-orphans
 ok "All INFHUB containers stopped."
 
 echo ""

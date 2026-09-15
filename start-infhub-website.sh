@@ -233,7 +233,7 @@ if [[ -n "$existing" && "$existing" != "[]" ]]; then
     response=$(ask "  Compose stack is running. Stop and restart?" "Y")
     if [[ ! "$response" =~ ^[nN] ]]; then
         echo "  Stopping existing Compose stack..."
-        docker compose -f "$COMPOSE_FILE" down 2>&1 || docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>&1
+        docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>&1
         ok "Existing Compose stack stopped"
     fi
 else
@@ -257,9 +257,9 @@ step "Building and starting the stack..."
 echo "  This may take a few minutes on first run (image builds + DB init)..."
 
 if [[ "$NO_BUILD" == true ]]; then
-    docker compose -f "$COMPOSE_FILE" up -d
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 else
-    docker compose -f "$COMPOSE_FILE" up -d --build
+    docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
 fi
 ok "Stack build and start command issued"
 
@@ -443,7 +443,8 @@ echo "    docker compose -f $COMPOSE_FILE logs -f lounge      — View lounge lo
 echo "    docker compose -f $COMPOSE_FILE logs -f inspircd    — View InspIRCd logs"
 echo "    docker compose -f $COMPOSE_FILE restart             — Restart all services"
 echo "    bash stop-infhub-website.sh                          — Stop all services"
-echo "    bash update-infhub-website.sh                        — Pull updates and rebuild"
+echo "    bash update-infhub-website.sh                        — Safe update and rebuild"
+echo "    bash restart-infhub-website.sh                       — Safe restart without rebuild"
 echo "    docker compose -f $COMPOSE_FILE exec db mariadb -u root -p\$DB_ROOT_PASSWORD infhub_database"
 echo "                                                       — Access database"
 echo ""
