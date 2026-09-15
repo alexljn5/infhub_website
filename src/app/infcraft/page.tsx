@@ -11,7 +11,7 @@ export default function InfcraftPage() {
                     ← Back
                 </Link>
                 <a
-                    href="https://infcraft.infhub.org:8123"
+                    href="http://infcraft.infhub.org:8123"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.infcraftBtn}
