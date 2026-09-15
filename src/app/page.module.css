@@ -32,41 +32,39 @@
 
 .asciiRow {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: var(--space-xl);
-    margin: var(--space-lg) 0;
-    flex-wrap: nowrap;
     width: 100%;
+    max-width: var(--content-max-width);
+    margin: var(--space-lg) 0;
 }
 
-.bunnyAsciiLeft,
-.bunnyAsciiRight {
+.bunnyLeft,
+.bunnyRight {
+    flex: 0 0 auto;
     font-family: var(--font-family-mono);
-    font-size: var(--font-size-xs);
+    font-size: 4px;
     line-height: 0.4;
     white-space: pre;
     margin: 0;
     padding: 0;
     color: var(--color-text-primary);
-    vertical-align: middle;
     overflow: hidden;
 }
 
-.bunnyAsciiRight {
+.bunnyRight {
     transform: scaleX(-1);
     display: inline-block;
 }
 
-.logoContainer {
+.logoCenter {
+    flex: 0 0 auto;
     display: flex;
     justify-content: center;
     align-items: center;
     border: 2px solid var(--color-accent);
     border-radius: 4px;
     padding: var(--space-lg);
-    margin: var(--space-lg) auto;
-    max-width: 100%;
     background: var(--color-bg-secondary);
     box-shadow: 0 0 0 1px rgba(255, 34, 34, 0.15), 0 0 6px rgba(255, 34, 34, 0.15);
 }
@@ -143,10 +141,10 @@
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
 
-    .bunnyAsciiLeft,
-    .bunnyAsciiRight {
-        font-size: 8px;
-        line-height: 0.5;
+    .bunnyLeft,
+    .bunnyRight {
+        font-size: 3px;
+        line-height: 0.4;
     }
 
     .logoAscii {
@@ -155,14 +153,11 @@
 }
 
 @media (max-width: 900px) {
-    .asciiRow {
-        gap: var(--space-lg);
-    }
 
-    .bunnyAsciiLeft,
-    .bunnyAsciiRight {
-        font-size: 6px;
-        line-height: 0.5;
+    .bunnyLeft,
+    .bunnyRight {
+        font-size: 2px;
+        line-height: 0.4;
     }
 
     .logoAscii {
@@ -183,20 +178,15 @@
         padding: var(--space-lg) 0 var(--space-xl);
     }
 
-    .asciiRow {
-        gap: var(--space-sm);
-        flex-wrap: nowrap;
-    }
-
-    .bunnyAsciiLeft,
-    .bunnyAsciiRight {
-        font-size: 4px;
-        line-height: 0.5;
+    .bunnyLeft,
+    .bunnyRight {
+        font-size: 1px;
+        line-height: 0.4;
         max-width: 100%;
         overflow-x: auto;
     }
 
-    .logoContainer {
+    .logoCenter {
         padding: var(--space-md);
     }
 

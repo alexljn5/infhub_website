@@ -17,11 +17,11 @@ export default async function HomePage() {
         <div className={styles.container}>
             <section className={styles.heroSection}>
                 <div className={styles.asciiRow}>
-                    <pre className={styles.bunnyAsciiLeft}>{bunnyAscii}</pre>
-                    <div className={styles.logoContainer}>
+                    <pre className={styles.bunnyLeft}>{bunnyAscii}</pre>
+                    <div className={styles.logoCenter}>
                         <pre className={styles.logoAscii}>{infhubAscii}</pre>
                     </div>
-                    <pre className={styles.bunnyAsciiRight}>{bunnyAscii}</pre>
+                    <pre className={styles.bunnyRight}>{bunnyAscii}</pre>
                 </div>
                 <div className={styles.heroCopy}>
                     <p className={styles.tagline}>Welcome to the INFHUB network</p>
