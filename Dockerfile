@@ -111,7 +111,7 @@ RUN groupadd --system inspircd \
     && useradd \
     --system \
     --gid inspircd \
-    --home-dir /opt/inspircd \
+    --home-dir /home/inspircd/inspircd \
     --shell /usr/sbin/nologin \
     inspircd
 
@@ -122,7 +122,7 @@ COPY inspircd/inspircd-4.9.0/ /build/inspircd/
 WORKDIR /build/inspircd
 
 RUN ./configure \
-    --prefix=/opt/inspircd \
+    --prefix=/home/inspircd/inspircd \
     --uid=inspircd \
     --gid=inspircd \
     --disable-auto-extras \
@@ -147,24 +147,24 @@ RUN groupadd --system inspircd \
     && useradd \
     --system \
     --gid inspircd \
-    --home-dir /opt/inspircd \
+    --home-dir /home/inspircd/inspircd \
     --shell /usr/sbin/nologin \
     inspircd
 
-COPY --from=inspircd-build /opt/inspircd/ /opt/inspircd/
+COPY --from=inspircd-build /home/inspircd/inspircd/ /home/inspircd/inspircd/
 
 RUN mkdir -p \
-    /opt/inspircd/run \
-    /opt/inspircd/data \
-    /opt/inspircd/logs \
-    && chown -R inspircd:inspircd /opt/inspircd
+    /home/inspircd/inspircd/conf \
+    /home/inspircd/inspircd/data \
+    /home/inspircd/inspircd/logs \
+    && chown -R inspircd:inspircd /home/inspircd/inspircd
 
-ENV INSPIRCD_HOME=/opt/inspircd
+ENV INSPIRCD_HOME=/home/inspircd/inspircd
 
-WORKDIR /opt/inspircd
+WORKDIR /home/inspircd/inspircd
 
 EXPOSE 6667 6697
 
 USER inspircd
 
-CMD ["/opt/inspircd/inspircd", "start"]
+CMD ["/home/inspircd/inspircd/inspircd", "start"]
