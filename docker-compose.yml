@@ -122,7 +122,9 @@ services:
     networks:
       - infhub-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000"]
+      # TheLounge image does not include curl — use node (guaranteed available
+      # since TheLounge is a Node.js application).
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9000', r => process.exit(0)).on('error', e => process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 15s

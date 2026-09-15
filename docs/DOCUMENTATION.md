@@ -341,6 +341,19 @@ If InspIRCd is restarting and TheLounge is unhealthy:
 - The startup script will warn (not exit) on InspIRCd/Lounge failures so you can still access the web app and Caddy
 - After fixing InspIRCd, rebuild with `docker compose build inspircd`
 
+### TheLounge Health Check (Fixed)
+
+TheLounge health check previously used `curl`, but the TheLounge Docker image does not include `curl`:
+
+```
+exec: "curl": executable file not found in $PATH
+```
+
+**Fix**: Changed the health check to use `node` (guaranteed available since TheLounge is a Node.js application):
+
+**Before**: `test: ["CMD", "curl", "-f", "http://localhost:9000"]`
+**After**: `test: ["CMD", "node", "-e", "require('http').get('http://localhost:9000', r => process.exit(0)).on('error', e => process.exit(1))"]`
+
 ### InspIRCd Container Restart Loop (Fixed)
 
 If `infhub-website-inspircd` shows `Restarting (0)` in `docker ps`:
