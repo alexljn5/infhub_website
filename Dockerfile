@@ -46,9 +46,9 @@ FROM node:20-alpine AS nextjs
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Install dependencies (use npm install to generate lock file if needed)
+COPY package.json ./
+RUN npm install
 
 # Copy source files
 COPY src/app ./src/app

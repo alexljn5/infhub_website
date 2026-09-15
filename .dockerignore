@@ -8,7 +8,6 @@ docker-compose.yml
 .dockerignore
 README.md
 LICENCE.md
-package.json
 __pycache__
 *.pyc
 *.log
