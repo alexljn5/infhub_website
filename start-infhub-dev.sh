@@ -6,9 +6,9 @@
 # without pulling from the production server.
 #
 # Usage:
-#   bash dev.sh            # Start the dev server
-#   bash dev.sh --port 3000
-#   bash dev.sh --help
+#   ./start-infhub-dev.sh            # Start the dev server
+#   ./start-infhub-dev.sh --port 3000
+#   ./start-infhub-dev.sh --help
 # ============================================================
 
 set -euo pipefail
@@ -20,7 +20,7 @@ for arg in "$@"; do
         --port)    PORT="$2"; shift 2 ;;
         -h|--help)
             cat <<EOF
-Usage: bash dev.sh [--port PORT]
+Usage: ./start-infhub-dev.sh [--port PORT]
 
   Start the Next.js dev server for local development.
 
@@ -29,8 +29,8 @@ Usage: bash dev.sh [--port PORT]
     -h, --help     Show this help message
 
   Examples:
-    bash dev.sh
-    bash dev.sh --port 3001
+    ./start-infhub-dev.sh
+    ./start-infhub-dev.sh --port 3001
 EOF
             exit 0
             ;;
@@ -38,13 +38,13 @@ EOF
     esac
 done
 
-echo "============================================"
-echo "  INFHUB Local Dev Server"
-echo "============================================"
-echo "  Port:    $PORT"
-echo "  URL:     http://localhost:$PORT"
-echo "  Ctrl+C to stop"
-echo "============================================"
+echo -e "\n\033[1;31m============================================\033[0m"
+echo -e "  \033[1;31m  INFHUB Local Dev Server\033[0m"
+echo -e "\033[1;31m============================================\033[0m"
+echo -e "  \033[1;31m  Port:\033[0m    $PORT"
+echo -e "  \033[1;31m  URL:\033[0m     http://localhost:$PORT"
+echo -e "  \033[1;31m  Ctrl+C to stop\033[0m"
+echo -e "\033[1;31m============================================\033[0m"
 echo ""
 
 npm run dev -- --port "$PORT"

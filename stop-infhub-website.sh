@@ -57,11 +57,11 @@ EOF
 done
 
 # --- Helper Functions ---
-step()  { echo -e "\n\033[1;36m[$(date '+%H:%M:%S')] $1\033[0m"; }
-ok()    { echo -e "  \033[1;32m[OK]\033[0m $1"; }
-warn()  { echo -e "  \033[1;33m[WARN]\033[0m $1"; }
+step()  { echo -e "\n\033[1;31m[$(date '+%H:%M:%S')] $1\033[0m"; }
+ok()    { echo -e "  \033[1;31m[OK]\033[0m $1"; }
+warn()  { echo -e "  \033[1;31m[WARN]\033[0m $1"; }
 err()   { echo -e "  \033[1;31m[ERR]\033[0m $1"; }
-info()  { echo -e "  \033[1;37m[INFO]\033[0m $1"; }
+info()  { echo -e "  \033[1;31m[INFO]\033[0m $1"; }
 
 ask() {
     local prompt="$1"
