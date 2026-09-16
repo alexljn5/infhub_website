@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Footer } from '@/app/components/Footer';
+import faviconIco from '@/img/logo/favicon/favicon.ico';
+import faviconSvg from '@/img/logo/favicon/favicon.svg';
 
 export const metadata: Metadata = {
     title: 'INFHUB',
@@ -8,6 +10,12 @@ export const metadata: Metadata = {
     robots: {
         index: false,
         follow: true,
+    },
+    icons: {
+        icon: [
+            { url: faviconIco.src },
+            { url: faviconSvg.src, type: 'image/svg+xml' },
+        ],
     },
 };
 

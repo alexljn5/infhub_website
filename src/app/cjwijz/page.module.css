@@ -1,0 +1,25 @@
+.main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - var(--footer-height));
+    padding: var(--space-xl);
+}
+
+.yokContainer {
+    padding: var(--space-md);
+    border: 3px solid var(--color-accent);
+    box-shadow:
+        0 0 10px var(--color-accent),
+        0 0 20px var(--color-accent),
+        0 0 40px var(--color-accent-dim),
+        inset 0 0 10px var(--color-accent-dim);
+    background-color: var(--color-bg-primary);
+}
+
+.yokImage {
+    display: block;
+    max-width: 600px;
+    width: 100%;
+    height: auto;
+}
