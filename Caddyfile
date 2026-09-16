@@ -14,18 +14,18 @@ www.infhub.org {
 
 # infcraft.infhub.org — INFCRAFT subdomain
 infcraft.infhub.org {
-    rewrite * /infcraft{uri}
+    rewrite / /infcraft
     reverse_proxy web:3000
 }
 
 # www.infcraft.infhub.org — www variant
 www.infcraft.infhub.org {
-    rewrite * /infcraft{uri}
+    rewrite / /infcraft
     reverse_proxy web:3000
 }
 
 # cjwijz.infhub.org — CJWIJZ subdomain
 cjwijz.infhub.org {
-    rewrite * /cjwijz{uri}
+    rewrite / /cjwijz
     reverse_proxy web:3000
 }
