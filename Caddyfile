@@ -14,7 +14,7 @@ www.infhub.org {
 
 # infcraft.infhub.org — INFCRAFT subdomain (DNS A record: 213.197.11.201)
 infcraft.infhub.org {
-    reverse_proxy web:3000/infcraft
+    reverse_proxy web:3000
 }
 
 # www.infcraft.infhub.org — www variant (DNS A record exists)
@@ -24,5 +24,5 @@ www.infcraft.infhub.org {
 
 # cjwijz.infhub.org — CJWIJZ subdomain (DNS A record needed)
 cjwijz.infhub.org {
-    reverse_proxy web:3000/cjwijz
+    reverse_proxy web:3000
 }
