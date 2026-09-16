@@ -196,8 +196,7 @@ ensure_compose_network() {
 # IMPORTANT:
 # This function works both before and after Caddy is started.
 #
-# The startup flow deliberately creates Caddy with --no-start,
-# attaches the network while Caddy is stopped, then starts it.
+# The startup flow creates Caddy, attaches the network, then starts it.
 #
 # This completely eliminates the previous race:
 #
@@ -785,7 +784,7 @@ ok "INFHUB network ready: $COMPOSE_NETWORK"
 # happens, Caddy starts with Networks={} and immediately tries
 # ACME.
 #
-# docker compose create --no-start caddy
+# docker compose create caddy
 #
 # creates the container but does not execute Caddy yet.
 # We can therefore attach the network first.
@@ -796,7 +795,6 @@ step "Creating Caddy without starting it..."
 docker compose \
     -f "$COMPOSE_FILE" \
     create \
-    --no-start \
     caddy
 
 ok "Caddy container created but not started"
