@@ -4,25 +4,35 @@
 
 # infhub.org — primary site (Let's Encrypt validated)
 infhub.org {
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Host {http.request.host}
+    }
 }
 
 # www.infhub.org — www variant (DNS A record exists)
 www.infhub.org {
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Host {http.request.host}
+    }
 }
 
 # infcraft.infhub.org — INFCRAFT subdomain (DNS A record: 213.197.11.201)
 infcraft.infhub.org {
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Host {http.request.host}
+    }
 }
 
 # www.infcraft.infhub.org — www variant (DNS A record exists)
 www.infcraft.infhub.org {
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Host {http.request.host}
+    }
 }
 
 # cjwijz.infhub.org — CJWIJZ subdomain (DNS A record needed)
 cjwijz.infhub.org {
-    reverse_proxy web:3000
+    reverse_proxy web:3000 {
+        header_up Host {http.request.host}
+    }
 }
