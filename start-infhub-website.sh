@@ -275,7 +275,7 @@ prepare_caddy_network() {
                 docker inspect \
                     --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
                     "$caddy_id" 2>/dev/null || true
-            )
+            )"
 
             if [[ "$attached_networks" == *"$COMPOSE_NETWORK"* ]]; then
                 ok "Caddy was already attached to $COMPOSE_NETWORK"
