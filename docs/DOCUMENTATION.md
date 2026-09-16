@@ -113,14 +113,69 @@ www.infhub.org {
     reverse_proxy web:3000
 }
 infcraft.infhub.org {
+    rewrite / /infcraft
     reverse_proxy web:3000
 }
 www.infcraft.infhub.org {
+    rewrite / /infcraft
+    reverse_proxy web:3000
+}
+cjwijz.infhub.org {
+    rewrite / /cjwijz
     reverse_proxy web:3000
 }
 ```
 
-Each domain directive routes traffic to the Next.js web service running on port 3000 inside the Docker network. All hostnames have DNS A records configured.
+Each domain directive routes traffic to the Next.js web service running on port 3000 inside the Docker network. Subdomains that serve a subdirectory application (`infcraft`, `cjwijz`) use a `rewrite / /path` directive that rewrites only the root path `/` to the corresponding subdirectory before proxying. This ensures that visiting `https://infcraft.infhub.org/` serves the INFCRAFT application (mounted at `/infcraft` in the Next.js app), while `https://infcraft.infhub.org/some-page` correctly proxies to `/some-page` without double-prefixing.
+
+All hostnames have DNS A records configured.
+
+### Subdomain Routing Architecture
+
+The production stack uses Caddy as a reverse proxy to route multiple subdomains to a single Next.js application running on port 3000. Each subdomain maps to a specific route within the Next.js app:
+
+| Subdomain | Next.js Route | Purpose |
+|-----------|--------------|---------|
+| `infhub.org` | `/` | Main website |
+| `www.infhub.org` | `/` | Main website (www variant) |
+| `infcraft.infhub.org` | `/infcraft` | INFCRAFT application |
+| `www.infcraft.infhub.org` | `/infcraft` | INFCRAFT application (www variant) |
+| `cjwijz.infhub.org` | `/cjwijz` | CJWIJZ page |
+
+#### How It Works
+
+1. A request arrives at Caddy (ports 80/443) with a specific `Host` header (e.g., `infcraft.infhub.org`).
+2. Caddy matches the Host header to the appropriate block in the `Caddyfile`.
+3. For subdomains serving subdirectory applications, Caddy's `rewrite / /path` directive rewrites the root path `/` to the subdirectory (e.g., `/infcraft`). **Only the root path is rewritten** — all other paths pass through unchanged.
+4. Caddy proxies the request to the Next.js web service on port 3000.
+5. Next.js serves the application from the subdirectory route.
+
+#### Why `rewrite / /path` Instead of `rewrite * /path{uri}`
+
+The `rewrite / /path` directive rewrites **only** the root path `/` to `/path`. All other paths (e.g., `/about`, `/api/health`) pass through unchanged.
+
+The alternative `rewrite * /path{uri}` would rewrite **all** paths by prepending `/path` to every URI. This causes a double-prefix problem: a request to `/cjwijz` would become `/cjwijz/cjwijz`, resulting in a 404 error.
+
+#### Why Not Use Next.js Middleware for Routing
+
+Next.js middleware was initially explored as an alternative to Caddy-based routing. However, middleware runs inside the Next.js application and cannot reliably distinguish between subdomains when Caddy replaces the `Host` header with the internal service address (`web:3000`). Caddy-based routing is the correct layer for this concern because:
+
+- Caddy inspects the original `Host` header from the client before forwarding
+- Caddy can rewrite paths before they reach Next.js
+- Middleware-based routing requires Caddy to preserve the original Host header, which adds complexity
+
+The current approach uses Caddy for both subdomain detection and path rewriting, keeping the Next.js application unaware of the subdomain routing.
+
+#### Troubleshooting Subdomain Routing
+
+If a subdomain serves the wrong content (e.g., `infcraft.infhub.org` shows the main site instead of INFCRAFT):
+
+1. Check that the Caddy container is running: `docker compose ps caddy`
+2. Verify the Caddyfile has the correct `rewrite / /path` directive for the subdomain
+3. Check that DNS A records point to the server IP
+4. Verify Caddy can reach the web service: `docker exec infhub-caddy curl -f http://web:3000/api/health`
+5. Check Caddy logs for routing errors: `docker compose logs caddy`
+6. Ensure the Next.js app has the corresponding route (e.g., `src/app/infcraft/page.tsx`)
 
 ## Docker Network Failure — Caddy Missing Network Attachment
 
@@ -328,6 +383,39 @@ If DNS subdomains don't route correctly:
 - Check DNS A record is properly configured
 - Ensure reverse proxy forwards to the correct port (8080 for web)
 - For local development, use `localhost` or `127.0.0.1` instead of domain names
+
+#### Subdomain Routing Serves Wrong Content
+
+If a subdomain like `infcraft.infhub.org` serves the main site instead of the INFCRAFT application:
+
+**Root cause**: Caddy was proxying all subdomains directly to `web:3000` without path rewriting, so the Next.js app received requests at `/` instead of `/infcraft`.
+
+**Fix**: Added `rewrite / /infcraft` (or the appropriate path) before `reverse_proxy web:3000` in the Caddyfile for each subdomain that serves a subdirectory application. Only the root path `/` is rewritten — all other paths pass through unchanged.
+
+```caddyfile
+infcraft.infhub.org {
+    rewrite / /infcraft
+    reverse_proxy web:3000
+}
+```
+
+**Why `rewrite / /path` not `rewrite * /path{uri}`**: The `rewrite * /path{uri}` directive rewrites ALL paths by prepending `/path` to every URI, causing a double-prefix problem (e.g., `/cjwijz` becomes `/cjwijz/cjwijz` → 404). The `rewrite / /path` directive rewrites only the root path `/`, leaving all other paths intact.
+
+### Shell Script Syntax Error
+
+If `sh start-infhub-website.sh` fails with `syntax error near unexpected token '('`:
+
+**Root cause**: An unterminated double-quoted string in a `docker inspect` command substitution on line 278 of `start-infhub-website.sh`. The missing closing `"` caused the shell to interpret subsequent content (including parentheses) as part of the string.
+
+**Fix**: Added the missing closing `"` to the `docker inspect` command substitution.
+
+### Docker Compose `--no-start` Flag Not Supported
+
+If `start-infhub-website.sh` fails with an error about `--no-start`:
+
+**Root cause**: The `--no-start` flag for `docker compose create` is not available in the installed version of Docker Compose.
+
+**Fix**: Removed the `--no-start` flag from the `docker compose create` command in `start-infhub-website.sh`.
 
 ### InspIRCd Crash Loop / TheLounge Unhealthy
 

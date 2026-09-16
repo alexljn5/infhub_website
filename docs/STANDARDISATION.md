@@ -23,8 +23,9 @@ The guiding idea is simple: **a page is a module, and a module owns its markup, 
 13. [Naming Conventions](#naming-conventions)
 14. [Environment Variables](#environment-variables)
 15. [Docker and Permissions](#docker-and-permissions)
-16. [Legacy Migration](#legacy-migration)
-17. [Review Checklist](#review-checklist)
+16. [Caddyfile Standards](#caddyfile-standards)
+17. [Legacy Migration](#legacy-migration)
+18. [Review Checklist](#review-checklist)
 
 ---
 
@@ -718,6 +719,88 @@ Check the deployment host in this order:
 6. Check ownership and read permissions on the deployment checkout if a reverse proxy serves files directly.
 
 `robots.txt` can prevent indexing, but it does not normally cause a browser request to receive an Apache 403.
+
+---
+
+## Caddyfile Standards
+
+The `Caddyfile` is the reverse proxy configuration for the production stack. It routes external traffic to the Next.js application and must follow these standards.
+
+### Routing Pattern
+
+Each subdomain is handled by a separate block. The block type depends on whether the subdomain serves the main site or a subdirectory application:
+
+#### Main Site Subdomains
+
+For subdomains that serve the root of the Next.js application, use a plain `reverse_proxy` directive:
+
+```caddyfile
+infhub.org {
+    reverse_proxy web:3000
+}
+www.infhub.org {
+    reverse_proxy web:3000
+}
+```
+
+No path rewriting is needed — the request path is forwarded as-is to Next.js.
+
+#### Subdirectory Application Subdomains
+
+For subdomains that serve a subdirectory within the Next.js application, use `rewrite / /path` before `reverse_proxy`:
+
+```caddyfile
+infcraft.infhub.org {
+    rewrite / /infcraft
+    reverse_proxy web:3000
+}
+cjwijz.infhub.org {
+    rewrite / /cjwijz
+    reverse_proxy web:3000
+}
+```
+
+The `rewrite / /path` directive rewrites **only** the root path `/` to the subdirectory. All other paths pass through unchanged. This ensures:
+
+- `https://infcraft.infhub.org/` → proxied to `https://infcraft.infhub.org/infcraft` (correct)
+- `https://infcraft.infhub.org/about` → proxied to `https://infcraft.infhub.org/about` (not `/infcraft/about`)
+
+#### Do Not Use `rewrite * /path{uri}`
+
+The `rewrite * /path{uri}` directive rewrites ALL paths by prepending `/path` to every URI. This causes a double-prefix problem:
+
+- `https://cjwijz.infhub.org/cjwijz` → becomes `/cjwijz/cjwijz` → 404
+
+Only use `rewrite / /path` for subdirectory application routing.
+
+### Caddyfile Rules
+
+1. Each subdomain gets its own block matched by the domain name.
+2. Main site subdomains (`infhub.org`, `www.infhub.org`) use plain `reverse_proxy web:3000`.
+3. Subdirectory application subdomains (`infcraft.infhub.org`, `www.infcraft.infhub.org`, `cjwijz.infhub.org`) use `rewrite / /path` followed by `reverse_proxy web:3000`.
+4. The `rewrite` directive must come **before** `reverse_proxy` — Caddy processes directives in order.
+5. Only the root path `/` is rewritten; all other paths pass through unchanged.
+6. Do not use `rewrite * /path{uri}` — it causes double-prefixing and 404 errors.
+7. Do not use Next.js middleware for subdomain routing — Caddy handles this at the proxy layer.
+8. All subdomains must have DNS A records configured before adding them to the Caddyfile.
+9. Caddy automatically obtains SSL certificates via Let's Encrypt for all blocks.
+10. The Caddyfile must be validated after any change: `docker exec infhub-caddy caddy validate --config /etc/caddy/Caddyfile`.
+
+### Adding a New Subdomain
+
+To add a new subdomain that serves a subdirectory application:
+
+1. Add a DNS A record for the subdomain pointing to the server IP.
+2. Add a new block to the `Caddyfile`:
+   ```caddyfile
+   newsubdomain.infhub.org {
+       rewrite / /subdirectory
+       reverse_proxy web:3000
+   }
+   ```
+3. Validate the Caddyfile: `docker exec infhub-caddy caddy validate --config /etc/caddy/Caddyfile`
+4. Restart Caddy: `docker compose restart caddy`
+5. Verify: `curl -vk --resolve newsubdomain.infhub.org:443:127.0.0.1 https://newsubdomain.infhub.org/`
 
 ---
 
