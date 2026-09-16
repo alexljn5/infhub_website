@@ -290,7 +290,7 @@ prepare_caddy_network() {
     local network_ip=""
     network_ip="$(
         docker inspect \
-            --format "{{with index .NetworkSettings.Networks \"$COMPOSE_NETWORK\"}}{{.IPAddress}}{{end}}" \
+            --format '{{with index .NetworkSettings.Networks "'"$COMPOSE_NETWORK"'"}}{{.IPAddress}}{{end}}' \
             "$caddy_id" 2>/dev/null || true
     )"
 
